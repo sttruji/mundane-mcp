@@ -119,8 +119,9 @@ async def make_offer(
     message: str | None = None,
     idempotency_key: str | None = None,
 ) -> dict:
-    """Offer a task to a worker. On acceptance the amount is held in escrow.
-    Fails with a structured error if it breaches the budget or any spend cap."""
+    """Offer a task to a worker. On success the amount is held in escrow while
+    pending. Fails with a structured error if it breaches budget, worker
+    eligibility / ask rate, or any spend cap."""
     body = {
         "task_id": task_id, "worker_id": worker_id, "amount_minor": amount_minor,
         "currency": currency, "expires_in_seconds": expires_in_seconds,
