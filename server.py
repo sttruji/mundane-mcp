@@ -66,8 +66,11 @@ async def post_task(
     currency: str = "USD",
     idempotency_key: str | None = None,
 ) -> dict:
-    """Create a real-world task (screened before it becomes offerable). Write
-    instructions a stranger could follow with no extra context. Money in cents."""
+    """Create a real-world task and run the full screening cascade: policy_gate
+    regex, task_shapes shape_match, Claude Opus 4.7 when ANTHROPIC_API_KEY is set
+    or SCREENING_LLM_FALLBACK when absent, then human_review parking when needed.
+    Results in status open, rejected, or screening. Write instructions a stranger
+    can execute."""
     body = {
         "title": title, "instructions": instructions,
         "location": {"lat": lat, "lng": lng, "address": address},
@@ -132,7 +135,9 @@ async def make_offer(
 
 @mcp.tool()
 async def get_task_status(task_id: str) -> dict:
-    """Current state of a task: lifecycle, active offer, worker, proof, timeline."""
+    """Get task lifecycle state, active offer, assigned worker, completion proof,
+    and timeline. Timeline includes screened:<outcome> entries from the screening
+    cascade, and status can include disputed or completed."""
     return await _request("GET", f"/tasks/{task_id}")
 
 
@@ -144,15 +149,19 @@ async def cancel_task(task_id: str, reason: str | None = None) -> dict:
 
 @mcp.tool()
 async def submit_completion_review(task_id: str, decision: str, reason: str | None = None) -> dict:
-    """Review submitted proof. 'accept' releases escrow; 'reject' needs a reason
-    and opens a dispute."""
+    """Review submitted proof. Accept publishes the real escrow.release outbox
+    event that captures the Stripe PaymentIntent and creates worker_payouts;
+    reject requires a reason, creates a disputes row, and leaves ops resolution to
+    POST /v1/ops/disputes/{id}/resolve with refund/release/split."""
     body = {"task_id": task_id, "decision": decision, "reason": reason}
     return await _request("POST", f"/tasks/{task_id}/review", json=body)
 
 
 @mcp.tool()
 async def submit_rating(task_id: str, score: int, description: str) -> dict:
-    """Rate a worker 1-5 with a description for a completed task (once per task)."""
+    """Rate a completed task once. Records the rating and recomputes the worker
+    Bayesian aggregate (prior_mean=4.2, prior_weight=10);
+    worker_new_aggregate_rating is the new aggregate."""
     body = {"task_id": task_id, "score": score, "description": description}
     return await _request("POST", f"/tasks/{task_id}/rating", json=body)
 
