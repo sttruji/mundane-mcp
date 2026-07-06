@@ -1,8 +1,10 @@
 """Mundane MCP server (design doc §6, Layer 2).
 
 A thin adapter: each tool maps to a Layer-1 REST endpoint and forwards the
-agent's API key. Any MCP-capable agent connects to this server and gets the
-Mundane toolset. Run over stdio:  python -m mcp_server.server
+agent's API key. Runs over stdio, one process per agent -- self-hosted by
+each agent operator, not a shared service Mundane runs centrally. See
+mcp_server/README.md for install + MCP client config. Entry point:
+`mundane-mcp` (console script) or `python -m mcp_server.server`.
 
 NOTE: uses the official MCP Python SDK (`pip install mcp`). Verify tool/registration
 syntax against the SDK version you install; the FastMCP surface is shown here.
@@ -166,5 +168,9 @@ async def submit_rating(task_id: str, score: int, description: str) -> dict:
     return await _request("POST", f"/tasks/{task_id}/rating", json=body)
 
 
-if __name__ == "__main__":
+def main() -> None:
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()

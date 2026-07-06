@@ -1,0 +1,20 @@
+[project]
+name = "mundane-mcp"
+version = "0.1.0"
+description = "MCP server exposing the Mundane agent-to-human marketplace as tools for any MCP-capable agent."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.2",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+mundane-mcp = "mcp_server.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
