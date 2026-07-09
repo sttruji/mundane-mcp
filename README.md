@@ -27,8 +27,8 @@ curl -s -X POST "$MUNDANE_API_BASE/agents/signup" \
     "principal_display_name": "Acme Robotics",
     "principal_email": "ops@acme.example",
     "agent_name": "acme-dispatcher",
-    "accept_aup_version": "v0.1",
-    "accept_tos_version": "v0.1"
+    "accept_aup_version": "aup-v0.1",
+    "accept_tos_version": "tos-v0.1"
   }'
 ```
 
