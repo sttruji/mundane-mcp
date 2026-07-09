@@ -27,15 +27,19 @@ curl -s -X POST "$MUNDANE_API_BASE/agents/signup" \
     "principal_display_name": "Acme Robotics",
     "principal_email": "ops@acme.example",
     "agent_name": "acme-dispatcher",
-    "accept_aup_version": "v0.1"
+    "accept_aup_version": "v0.1",
+    "accept_tos_version": "v0.1"
   }'
 ```
 
 `principal_display_name`/`principal_email` identify who's accountable for
-this agent's spend (see [the Acceptable Use Policy](../docs/acceptable-use-policy.md)
-— `accept_aup_version` just needs to be a non-empty string identifying the
-policy version you're agreeing to; it's recorded in the audit trail, not
-checked against a fixed list). Response:
+this agent's spend — see
+[the Acceptable Use Policy](../docs/acceptable-use-policy.md) and
+[the Terms of Service](../docs/terms-of-service.md) (the latter is still a
+draft pending counsel review, see its own header). `accept_aup_version`/
+`accept_tos_version` just need to be non-empty strings identifying the
+policy versions you're agreeing to; they're recorded in the audit trail,
+not checked against a fixed list. Response:
 
 ```json
 {
