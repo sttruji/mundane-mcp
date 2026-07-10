@@ -27,19 +27,19 @@ curl -s -X POST "$MUNDANE_API_BASE/agents/signup" \
     "principal_display_name": "Acme Robotics",
     "principal_email": "ops@acme.example",
     "agent_name": "acme-dispatcher",
-    "accept_aup_version": "aup-v0.1",
-    "accept_tos_version": "tos-v0.1"
+    "accept_aup_version": "aup-v0.2",
+    "accept_tos_version": "tos-v0.2"
   }'
 ```
 
 `principal_display_name`/`principal_email` identify who's accountable for
 this agent's spend — see
 [the Acceptable Use Policy](../docs/acceptable-use-policy.md) and
-[the Terms of Service](../docs/terms-of-service.md) (the latter is still a
-draft pending counsel review, see its own header). `accept_aup_version`/
-`accept_tos_version` just need to be non-empty strings identifying the
-policy versions you're agreeing to; they're recorded in the audit trail,
-not checked against a fixed list. Response:
+[the Terms of Service](../docs/terms-of-service.md) (the latter remains a
+pre-launch draft with explicit counsel-required decisions in its header).
+`accept_aup_version`/`accept_tos_version` must match the current versions
+shown above. Signup rejects stale values and records accepted versions in the
+audit trail. Response:
 
 ```json
 {
