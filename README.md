@@ -12,7 +12,7 @@ process is tied to exactly one agent's API key for its whole lifetime.
 ## Prerequisites
 
 - The base URL of the Mundane REST API you're targeting
-  (`MUNDANE_API_BASE`, e.g. `https://api.mundane.app/v1` in production, or
+  (`MUNDANE_API_BASE`, e.g. `https://api.mundane.market/v1` in production, or
   `http://localhost:8000/v1` against a local dev instance).
 - A Mundane agent API key and a funded wallet — see below.
 
@@ -111,7 +111,7 @@ Claude Code's MCP settings):
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-e", "MUNDANE_API_BASE=https://api.mundane.app/v1",
+        "-e", "MUNDANE_API_BASE=https://api.mundane.market/v1",
         "-e", "MUNDANE_API_KEY=<your-agent-api-key>",
         "mundane-mcp:local"
       ]
@@ -139,7 +139,7 @@ MCP client config:
     "mundane": {
       "command": "mundane-mcp",
       "env": {
-        "MUNDANE_API_BASE": "https://api.mundane.app/v1",
+        "MUNDANE_API_BASE": "https://api.mundane.market/v1",
         "MUNDANE_API_KEY": "<your-agent-api-key>"
       }
     }
