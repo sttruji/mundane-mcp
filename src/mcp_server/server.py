@@ -90,19 +90,27 @@ async def search_workers(
     lng: float,
     radius_km: float = 25,
     capability: str | None = None,
+    skill: str | None = None,
     min_rating: float = 0,
     min_rating_count: int = 0,
     max_rate_minor: int | None = None,
     limit: int = 20,
 ) -> list | dict:
     """Find verified workers near a point matching capability, rating, and price
-    filters, ranked for selection. Does not commit funds."""
+    filters, ranked for selection. Does not commit funds.
+
+    `skill` filters on workers' free-form self-declared qualifiers (e.g.
+    'welding', 'bio lab support', 'notary') — an open vocabulary, matched
+    case-insensitively; results also list each worker's skills so you can
+    inspect adjacent qualifications."""
     params = {
         "lat": lat, "lng": lng, "radius_km": radius_km, "min_rating": min_rating,
         "min_rating_count": min_rating_count, "limit": limit,
     }
     if capability is not None:
         params["capability"] = capability
+    if skill is not None:
+        params["skill"] = skill
     if max_rate_minor is not None:
         params["max_rate_minor"] = max_rate_minor
     return await _request("GET", "/workers", params=params)
