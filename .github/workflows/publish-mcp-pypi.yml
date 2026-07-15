@@ -1,0 +1,47 @@
+name: Publish MCP to PyPI
+
+# Secondary distribution path: `pip install mundane-mcp`. Runs in the PUBLIC
+# mirror repo (sttruji/mundane-mcp), where this package's files sit at the repo
+# root. Publishes to PyPI via Trusted Publishing (OIDC) — no API token stored.
+#
+# ONE-TIME PyPI setup before the first run:
+#   1. Create the project `mundane-mcp` on PyPI (or add a "pending publisher").
+#   2. In the project's Publishing settings add a GitHub trusted publisher:
+#        Owner:       sttruji
+#        Repository:  mundane-mcp
+#        Workflow:    publish-mcp-pypi.yml
+#        Environment: pypi
+#   (Prefer a token instead? Delete the `permissions:`/OIDC bits, add
+#    `password: ${{ secrets.PYPI_API_TOKEN }}` to the publish step, and set
+#    that secret in the repo.)
+#
+# Bump `version` in pyproject.toml before tagging — PyPI refuses to overwrite
+# an existing version.
+
+on:
+  push:
+    tags: ["mcp-v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # OIDC token for Trusted Publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build .
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

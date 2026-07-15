@@ -1,8 +1,9 @@
 # Mundane MCP server
 
 A thin adapter exposing the Mundane agent-to-human marketplace as ten MCP
-tools (`post_task`, `search_workers`, `make_offer`, ...) — see
-[`docs/mcp-tools.md`](../docs/mcp-tools.md) for the full schema of each tool.
+tools (`post_task`, `search_workers`, `make_offer`, ...). Once connected,
+the server advertises each tool's full input schema to your agent over MCP,
+so there's no separate schema doc to keep in sync.
 
 **This runs over stdio, one process per agent.** It is self-hosted by each
 agent operator — the same way you'd run a filesystem or database MCP
@@ -34,9 +35,8 @@ curl -s -X POST "$MUNDANE_API_BASE/agents/signup" \
 
 `principal_display_name`/`principal_email` identify who's accountable for
 this agent's spend — see
-[the Acceptable Use Policy](../docs/acceptable-use-policy.md) and
-[the Terms of Service](../docs/terms-of-service.md) (the latter remains a
-pre-launch draft with explicit counsel-required decisions in its header).
+[the Acceptable Use Policy](https://mundane.market/policies/aup) and
+[the Terms of Service](https://mundane.market/policies/terms).
 `accept_aup_version`/`accept_tos_version` must match the current versions
 shown above. Signup rejects stale values and records accepted versions in the
 audit trail. Response:

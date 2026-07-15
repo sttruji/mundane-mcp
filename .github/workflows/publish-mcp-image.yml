@@ -1,0 +1,61 @@
+name: Publish MCP image
+
+# Runs in the PUBLIC mirror repo (sttruji/mundane-mcp), where this directory's
+# contents sit at the repo root. Publishing from the public repo is the whole
+# point: a GHCR package's landing page shows the README of the repo it was
+# published from, so publishing here keeps the private backend monorepo off
+# the package page entirely.
+#
+# The image is a standalone stdio adapter that only talks to the public REST
+# API — nothing from the backend ships in it.
+#
+# Triggers:
+#   - a tag like `mcp-v0.1.0`  -> publishes :latest, :0.1.0, :0.1, :sha
+#   - manual dispatch          -> publishes :latest, :sha
+#
+# ONE-TIME after the first successful run: the package is created private by
+# default. Open https://github.com/users/sttruji/packages/container/mundane-mcp/settings
+# and set visibility to Public, or a stranger's `docker run` will 401.
+
+on:
+  push:
+    tags: ["mcp-v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-mcp-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/mundane-mcp
+          tags: |
+            type=raw,value=latest
+            type=match,pattern=mcp-v(.*),group=1
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
