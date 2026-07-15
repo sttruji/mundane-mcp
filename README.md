@@ -95,14 +95,12 @@ and pay. The wallet is credited once Stripe confirms the payment; check
 With a key and a funded wallet in hand, pick an install option below and
 configure your MCP client with them.
 
-## Option A: Docker (no local Python needed)
+## Option A: Docker (recommended — no local Python, nothing to clone)
 
-```bash
-docker build -t mundane-mcp:local .
-```
-
-MCP client config (e.g. Claude Desktop's `claude_desktop_config.json`, or
-Claude Code's MCP settings):
+The image is published to the GitHub Container Registry. `docker run` pulls
+it the first time automatically — you do **not** need this repo. MCP client
+config (e.g. Claude Desktop's `claude_desktop_config.json`, or Claude Code's
+MCP settings):
 
 ```json
 {
@@ -113,7 +111,7 @@ Claude Code's MCP settings):
         "run", "-i", "--rm",
         "-e", "MUNDANE_API_BASE=https://api.mundane.market/v1",
         "-e", "MUNDANE_API_KEY=<your-agent-api-key>",
-        "mundane-mcp:local"
+        "ghcr.io/sttruji/mundane-mcp:latest"
       ]
     }
   }
@@ -124,10 +122,14 @@ Claude Code's MCP settings):
 lifecycle for as long as the connection is open, the same way it would for
 a directly-invoked binary. There's no `-d`/detached mode for this image.
 
+_Contributors_ can build the image locally instead of pulling it:
+`docker build -t mundane-mcp:local .` (run from this directory), then use
+`mundane-mcp:local` in place of the `ghcr.io/...` reference above.
+
 ## Option B: pip install
 
 ```bash
-pip install -e mcp_server/       # from a checkout of this repo
+pip install mundane-mcp          # from PyPI — no checkout needed
 mundane-mcp                      # or: python -m mcp_server.server
 ```
 
