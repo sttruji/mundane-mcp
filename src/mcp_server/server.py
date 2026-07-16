@@ -100,8 +100,11 @@ async def search_workers(
     filters, ranked for selection. Does not commit funds.
 
     `skill` filters on workers' free-form self-declared qualifiers (e.g.
-    'welding', 'bio lab support', 'notary') — an open vocabulary, matched
-    case-insensitively; results also list each worker's skills so you can
+    'welding', 'bio lab support', 'notary') — an open vocabulary, fuzzy-matched
+    (case-insensitive, tolerant of typos and word order, and matching a query
+    word inside a multi-word tag). It does not yet bridge synonyms, so 'move
+    boxes' won't find 'lifting heavy items' — prefer the worker's own likely
+    wording, or search without `skill` and read each result's `skills` list to
     inspect adjacent qualifications."""
     params = {
         "lat": lat, "lng": lng, "radius_km": radius_km, "min_rating": min_rating,
