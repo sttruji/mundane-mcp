@@ -91,7 +91,7 @@ async def post_task(
     idempotency_key: str | None = None,
 ) -> dict:
     """Create a real-world task and run the full screening cascade: policy_gate
-    regex, task_shapes shape_match, Claude Opus 4.7 when ANTHROPIC_API_KEY is set
+    regex, task_shapes shape_match, a Claude LLM classifier when ANTHROPIC_API_KEY is set
     or SCREENING_LLM_FALLBACK when absent, then human_review parking when needed.
     Results in status open, rejected, or screening. Write instructions a stranger
     can execute."""
