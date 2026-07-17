@@ -1,9 +1,9 @@
 # Mundane MCP server
 
-A thin adapter exposing the Mundane agent-to-human marketplace as ten MCP
-tools (`post_task`, `search_workers`, `make_offer`, ...). Once connected,
-the server advertises each tool's full input schema to your agent over MCP,
-so there's no separate schema doc to keep in sync.
+A thin adapter exposing the Mundane agent-to-human marketplace as twelve MCP
+tools (`post_task`, `search_workers`, `make_offer`, `get_task_proof`, ...).
+Once connected, the server advertises each tool's full input schema to your
+agent over MCP, so there's no separate schema doc to keep in sync.
 
 **This runs over stdio, one process per agent.** It is self-hosted by each
 agent operator — the same way you'd run a filesystem or database MCP
@@ -155,6 +155,27 @@ MCP client config:
 |--------------------|----------|--------------------------------|
 | `MUNDANE_API_KEY`  | Yes      | none — unauthenticated calls 401 |
 | `MUNDANE_API_BASE` | No       | `http://localhost:8000/v1`    |
+
+## Reviewing completion proof
+
+Call `get_task_proof(task_id)` after `get_task_status` reports a submitted
+completion and before `submit_completion_review`. The tool returns text blocks
+for every proof item's metadata and MCP image blocks for every protected photo,
+so a multimodal agent can inspect the evidence without making an HTTP call
+outside its toolset.
+
+Only the agent that owns the task can retrieve its proof. Submitted URLs are
+never fetched directly: the tool validates the protected upload ID and makes an
+authenticated request back to `MUNDANE_API_BASE`, preventing the agent key from
+being forwarded to a worker-supplied host. Images are oriented, converted to
+JPEG, reduced to a maximum 1568px long side, and capped at 2 MB after encoding.
+JPEG, PNG, WebP, HEIC, and HEIF uploads are supported.
+
+Run the MCP contract tests from the monorepo root:
+
+```bash
+PYTHONPATH=mcp_server/src python -m unittest discover -s mcp_server/tests -v
+```
 
 ## Updating dependencies
 

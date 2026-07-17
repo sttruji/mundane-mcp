@@ -9,15 +9,30 @@ mcp_server/README.md for install + MCP client config. Entry point:
 NOTE: uses the official MCP Python SDK (`pip install mcp`). Verify tool/registration
 syntax against the SDK version you install; the FastMCP surface is shown here.
 """
+import json
 import os
+import re
+import uuid
+from io import BytesIO
+from urllib.parse import urlsplit
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image as MCPImage
+from PIL import Image as PILImage, ImageOps, UnidentifiedImageError
+from pillow_heif import register_heif_opener
 
 API_BASE = os.environ.get("MUNDANE_API_BASE", "http://localhost:8000/v1")
 API_KEY = os.environ.get("MUNDANE_API_KEY", "")
 
 mcp = FastMCP("mundane")
+
+MAX_PROOF_DOWNLOAD_BYTES = 8 * 1024 * 1024
+MAX_PROOF_OUTPUT_BYTES = 2 * 1024 * 1024
+MAX_PROOF_LONG_SIDE = 1568
+MAX_PROOF_DECODED_PIXELS = 40_000_000
+_PROOF_UPLOAD_PATH = re.compile(r"^(?:/v1)?/proof-uploads/([^/]+)/?$")
+
+register_heif_opener()
 
 
 def _client() -> httpx.AsyncClient:
@@ -38,6 +53,84 @@ async def _request(method: str, path: str, **kw) -> dict | list:
             except Exception:
                 return {"error": True, "status": r.status_code, "detail": r.text}
         return r.json()
+
+
+def _protected_upload_path(raw_url: object) -> str | None:
+    """Return an API-relative proof path without trusting the submitted host."""
+    if not isinstance(raw_url, str):
+        return None
+    match = _PROOF_UPLOAD_PATH.fullmatch(urlsplit(raw_url).path)
+    if match is None:
+        return None
+    try:
+        upload_id = str(uuid.UUID(match.group(1)))
+    except ValueError:
+        return None
+    return f"/proof-uploads/{upload_id}"
+
+
+def _jpeg_for_model(raw: bytes) -> bytes:
+    """Orient, bound, and encode a proof photo for multimodal MCP clients."""
+    if len(raw) > MAX_PROOF_DOWNLOAD_BYTES:
+        raise ValueError("proof photo exceeds the 8 MB retrieval limit")
+    try:
+        with PILImage.open(BytesIO(raw)) as source:
+            if source.width * source.height > MAX_PROOF_DECODED_PIXELS:
+                raise ValueError("proof photo exceeds the safe decoded-pixel limit")
+            source.load()
+            image = ImageOps.exif_transpose(source)
+            image.thumbnail(
+                (MAX_PROOF_LONG_SIDE, MAX_PROOF_LONG_SIDE),
+                PILImage.Resampling.LANCZOS,
+            )
+            if "A" in image.getbands() or "transparency" in image.info:
+                rgba = image.convert("RGBA")
+                flattened = PILImage.new("RGB", rgba.size, "white")
+                flattened.paste(rgba, mask=rgba.getchannel("A"))
+                image = flattened
+            else:
+                image = image.convert("RGB")
+
+            for quality in (85, 75, 65, 55):
+                output = BytesIO()
+                image.save(output, format="JPEG", quality=quality, optimize=True)
+                encoded = output.getvalue()
+                if len(encoded) <= MAX_PROOF_OUTPUT_BYTES:
+                    return encoded
+    except (
+        OSError,
+        UnidentifiedImageError,
+        PILImage.DecompressionBombError,
+    ) as exc:
+        raise ValueError("proof upload is not a decodable image") from exc
+    raise ValueError("normalized proof photo exceeds the 2 MB MCP limit")
+
+
+async def _fetch_proof_image(path: str) -> MCPImage | dict:
+    async with _client() as client:
+        response = await client.get(path)
+        if response.status_code >= 400:
+            try:
+                detail = response.json()
+            except Exception:
+                detail = response.text
+            return {
+                "error": True,
+                "status": response.status_code,
+                "detail": detail,
+            }
+        content_type = response.headers.get("content-type", "").split(";", 1)[0]
+        if not content_type.startswith("image/"):
+            return {
+                "error": True,
+                "status": 502,
+                "detail": "proof upload did not return an image",
+            }
+        try:
+            normalized = _jpeg_for_model(response.content)
+        except ValueError as exc:
+            return {"error": True, "status": 422, "detail": str(exc)}
+        return MCPImage(data=normalized, format="jpeg")
 
 
 @mcp.tool()
@@ -174,6 +267,58 @@ async def get_task_status(task_id: str) -> dict:
     and timeline. Timeline includes screened:<outcome> entries from the screening
     cascade, and status can include disputed or completed."""
     return await _request("GET", f"/tasks/{task_id}")
+
+
+@mcp.tool()
+async def get_task_proof(task_id: str):
+    """View submitted completion proof before accepting or rejecting it.
+
+    Returns each proof item's metadata as text and each protected photo as MCP
+    image content. Photos are oriented and reduced to a 1568px long side. Only
+    the agent that owns the task can retrieve it; non-owners receive the task
+    endpoint's 404 response.
+    """
+    task = await _request("GET", f"/tasks/{task_id}")
+    if not isinstance(task, dict) or task.get("error"):
+        return task
+
+    completion = task.get("completion")
+    proof = completion.get("proof") if isinstance(completion, dict) else None
+    if not isinstance(proof, list) or not proof:
+        return [f"Task {task_id} has no submitted completion proof."]
+
+    content: list[object] = []
+    for index, item in enumerate(proof, start=1):
+        if not isinstance(item, dict):
+            content.append(f"Proof {index} metadata is malformed.")
+            continue
+
+        upload_path = _protected_upload_path(item.get("url"))
+        metadata = {key: value for key, value in item.items() if key != "url"}
+        if upload_path is not None:
+            metadata["upload_id"] = upload_path.rsplit("/", 1)[-1]
+        content.append(
+            f"Proof {index} metadata:\n"
+            + json.dumps(metadata, sort_keys=True, ensure_ascii=True)
+        )
+
+        if item.get("type") != "photo":
+            continue
+        if upload_path is None:
+            content.append(
+                f"Proof {index} photo URL is not a protected Mundane proof upload."
+            )
+            continue
+
+        image = await _fetch_proof_image(upload_path)
+        if isinstance(image, dict):
+            content.append(
+                f"Proof {index} image retrieval failed:\n"
+                + json.dumps(image, sort_keys=True, ensure_ascii=True)
+            )
+        else:
+            content.append(image)
+    return content
 
 
 @mcp.tool()
