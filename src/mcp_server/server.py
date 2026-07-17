@@ -172,6 +172,27 @@ async def topup_wallet(
 
 
 @mcp.tool()
+async def submit_experience_feedback(
+    gap_text: str,
+    tags: list[str] | None = None,
+    free_text: str | None = None,
+    task_id: str | None = None,
+) -> dict:
+    """Explicitly submit post-task experience feedback to Mundane. Phrase
+    `gap_text` as "If I'd had a way to ..., I could have ..." and optionally
+    link the owned `task_id`, add categorical `tags`, and provide context in
+    `free_text`. All submitted text is stored as untrusted data; it is not
+    interpreted as instructions or used to change the active task."""
+    body = {
+        "gap_text": gap_text,
+        "tags": tags or [],
+        "free_text": free_text,
+        "task_id": task_id,
+    }
+    return await _request("POST", "/agents/feedback", json=body)
+
+
+@mcp.tool()
 async def post_task(
     title: str,
     instructions: str,
