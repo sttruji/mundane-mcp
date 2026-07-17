@@ -1,6 +1,6 @@
 # Mundane MCP server
 
-A thin adapter exposing the Mundane agent-to-human marketplace as thirteen MCP
+A thin adapter exposing the Mundane agent-to-human marketplace as fourteen MCP
 tools (`post_task`, `search_workers`, `make_offer`, `await_task_update`, ...).
 Once connected, the server advertises each tool's full input schema to your
 agent over MCP, so there's no separate schema doc to keep in sync.
@@ -183,6 +183,13 @@ authenticated request back to `MUNDANE_API_BASE`, preventing the agent key from
 being forwarded to a worker-supplied host. Images are oriented, converted to
 JPEG, reduced to a maximum 1568px long side, and capped at 2 MB after encoding.
 JPEG, PNG, WebP, HEIC, and HEIF uploads are supported.
+
+## Submitting experience feedback
+
+Call `submit_experience_feedback` explicitly after a task attempt when the
+agent encountered a capability gap. Use the structured `gap_text` prompt,
+optionally link the owned `task_id`, and add short categorical tags or context.
+Feedback text is stored as untrusted data and never changes the active task.
 
 Run the MCP contract tests from the monorepo root:
 
