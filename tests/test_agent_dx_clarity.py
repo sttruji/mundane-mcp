@@ -14,6 +14,13 @@ class AgentDxToolDescriptionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(phrase, self.tools["search_workers"].description)
         self.assertIn(phrase, self.tools["get_worker"].description)
 
+    async def test_worker_tools_explain_advisory_rate_card(self):
+        for name in ("search_workers", "get_worker"):
+            description = self.tools[name].description
+            self.assertIn("rate_card", description)
+            self.assertIn("advisory", description)
+            self.assertIn("offer at least", description)
+
     async def test_spend_status_explains_caller_identity(self):
         description = self.tools["get_spend_status"].description
         self.assertIn("authenticated agent", description)

@@ -237,9 +237,12 @@ async def search_workers(
     limit: int = 20,
 ) -> list | dict:
     """Find verified workers near a point matching capability, rating, and price
-    filters, ranked for selection. `ask_rate_minor` is each worker's minimum per-task price in minor units;
-    `ask_rate_basis` is `per_task`, and
-    `max_rate_minor` filters on that same basis. Does not commit funds.
+    filters, ranked for selection. `ask_rate_minor` is each worker's enforced
+    minimum per-task price in minor units; `ask_rate_basis` is `per_task`, and
+    `max_rate_minor` filters on that same basis. `rate_card` contains advisory
+    per-task asks for labeled work. When the task fits a label, offer at least
+    that entry's `rate_minor`; labels are informational and are not matched or
+    enforced by the offer endpoint. Does not commit funds.
 
     `skill` filters on workers' free-form self-declared qualifiers (e.g.
     'welding', 'bio lab support', 'notary') — an open vocabulary, fuzzy-matched
@@ -264,8 +267,10 @@ async def search_workers(
 @mcp.tool()
 async def get_worker(worker_id: str) -> dict:
     """Return one worker's public profile and reputation. `ask_rate_minor` is
-    the worker's minimum per-task price in minor units and `ask_rate_basis` is
-    `per_task`."""
+    the worker's enforced minimum per-task price in minor units and
+    `ask_rate_basis` is `per_task`. `rate_card` entries are advisory asks for
+    labeled work; when the task fits a label, offer at least that entry's
+    `rate_minor`. Only the general ask is enforced by the offer endpoint."""
     return await _request("GET", f"/workers/{worker_id}")
 
 
