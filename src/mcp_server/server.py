@@ -30,6 +30,7 @@ MAX_PROOF_DOWNLOAD_BYTES = 8 * 1024 * 1024
 MAX_PROOF_OUTPUT_BYTES = 2 * 1024 * 1024
 MAX_PROOF_LONG_SIDE = 1568
 MAX_PROOF_DECODED_PIXELS = 40_000_000
+MAX_TASK_WAIT_SECONDS = 55.0
 _PROOF_UPLOAD_PATH = re.compile(r"^(?:/v1)?/proof-uploads/([^/]+)/?$")
 
 register_heif_opener()
@@ -142,8 +143,9 @@ async def list_capabilities() -> list | dict:
 
 @mcp.tool()
 async def get_spend_status() -> dict:
-    """Wallet balance and remaining headroom against every spend cap. Consult
-    before making offers to avoid rejected escrow."""
+    """Return the authenticated agent and principal identity, wallet balance,
+    and remaining headroom against every spend cap. Money fields are integer
+    minor units in the returned currency. Consult before making offers."""
     return await _request("GET", "/spend-status")
 
 
@@ -187,7 +189,9 @@ async def post_task(
     regex, task_shapes shape_match, a Claude LLM classifier when ANTHROPIC_API_KEY is set
     or SCREENING_LLM_FALLBACK when absent, then human_review parking when needed.
     Results in status open, rejected, or screening. Write instructions a stranger
-    can execute."""
+    can execute. `budget_max_minor` is the all-in ceiling in integer minor units
+    of `currency`; `deadline` is an ISO 8601 timestamp with a timezone. Latitude
+    and longitude are decimal degrees."""
     body = {
         "title": title, "instructions": instructions,
         "location": {"lat": lat, "lng": lng, "address": address},
@@ -212,7 +216,9 @@ async def search_workers(
     limit: int = 20,
 ) -> list | dict:
     """Find verified workers near a point matching capability, rating, and price
-    filters, ranked for selection. Does not commit funds.
+    filters, ranked for selection. `ask_rate_minor` is each worker's minimum per-task price in minor units;
+    `ask_rate_basis` is `per_task`, and
+    `max_rate_minor` filters on that same basis. Does not commit funds.
 
     `skill` filters on workers' free-form self-declared qualifiers (e.g.
     'welding', 'bio lab support', 'notary') — an open vocabulary, fuzzy-matched
@@ -236,7 +242,9 @@ async def search_workers(
 
 @mcp.tool()
 async def get_worker(worker_id: str) -> dict:
-    """Full public profile and reputation detail for one worker."""
+    """Return one worker's public profile and reputation. `ask_rate_minor` is
+    the worker's minimum per-task price in minor units and `ask_rate_basis` is
+    `per_task`."""
     return await _request("GET", f"/workers/{worker_id}")
 
 
@@ -250,9 +258,11 @@ async def make_offer(
     message: str | None = None,
     idempotency_key: str | None = None,
 ) -> dict:
-    """Offer a task to a worker. On success the amount is held in escrow while
-    pending. Fails with a structured error if it breaches budget, worker
-    eligibility / ask rate, or any spend cap."""
+    """Offer a task to a worker. `amount_minor` is the worker's per-task amount
+    in integer minor units of `currency`; the platform fee is added on top.
+    `expires_in_seconds` is the pending-offer lifetime in seconds. On success,
+    the all-in total is held in escrow. Structured errors report budget, worker
+    eligibility / ask-rate, wallet, or spend-cap failures."""
     body = {
         "task_id": task_id, "worker_id": worker_id, "amount_minor": amount_minor,
         "currency": currency, "expires_in_seconds": expires_in_seconds,
@@ -264,9 +274,30 @@ async def make_offer(
 @mcp.tool()
 async def get_task_status(task_id: str) -> dict:
     """Get task lifecycle state, active offer, assigned worker, completion proof,
-    and timeline. Timeline includes screened:<outcome> entries from the screening
+    and timeline. Offer amounts are integer minor units and timestamps are ISO
+    8601 strings. Timeline includes screened:<outcome> entries from the screening
     cascade, and status can include disputed or completed."""
     return await _request("GET", f"/tasks/{task_id}")
+
+
+@mcp.tool()
+async def await_task_update(
+    task_id: str,
+    timeout_seconds: float = MAX_TASK_WAIT_SECONDS,
+) -> dict:
+    """Wait `timeout_seconds` (capped at 55 seconds) for an owned task to change,
+    then return its full
+    status payload. `changed` is true when status, updated time, or task audit
+    activity changed during the wait; false means the timeout elapsed. Use this
+    instead of repeatedly calling get_task_status while waiting for a worker.
+    """
+    bounded_timeout = min(max(timeout_seconds, 0.0), MAX_TASK_WAIT_SECONDS)
+    return await _request(
+        "GET",
+        f"/tasks/{task_id}",
+        params={"wait_for_change": bounded_timeout},
+        timeout=bounded_timeout + 5.0,
+    )
 
 
 @mcp.tool()
@@ -323,13 +354,15 @@ async def get_task_proof(task_id: str):
 
 @mcp.tool()
 async def cancel_task(task_id: str, reason: str | None = None) -> dict:
-    """Cancel a task and any pending offer (subject to cancellation policy)."""
+    """Cancel a task and any pending offer. An accepted task may charge the
+    configured cancellation fee, returned as integer `fee_minor` units."""
     return await _request("POST", f"/tasks/{task_id}/cancel", json={"reason": reason})
 
 
 @mcp.tool()
 async def submit_completion_review(task_id: str, decision: str, reason: str | None = None) -> dict:
-    """Review submitted proof. Accept publishes the real escrow.release outbox
+    """Review submitted proof with decision `accept` or `reject`. Reject requires
+    a reason. Accept publishes the real escrow.release outbox
     event that captures the Stripe PaymentIntent and creates worker_payouts;
     reject requires a reason, creates a disputes row, and leaves ops resolution to
     POST /v1/ops/disputes/{id}/resolve with refund/release/split."""
@@ -339,7 +372,8 @@ async def submit_completion_review(task_id: str, decision: str, reason: str | No
 
 @mcp.tool()
 async def submit_rating(task_id: str, score: int, description: str) -> dict:
-    """Rate a completed task once. Records the rating and recomputes the worker
+    """Rate a completed task once with an integer score from 1 through 5 and a
+    written description. Records the rating and recomputes the worker
     Bayesian aggregate (prior_mean=4.2, prior_weight=10);
     worker_new_aggregate_rating is the new aggregate."""
     body = {"task_id": task_id, "score": score, "description": description}

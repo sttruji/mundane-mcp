@@ -1,7 +1,7 @@
 # Mundane MCP server
 
-A thin adapter exposing the Mundane agent-to-human marketplace as twelve MCP
-tools (`post_task`, `search_workers`, `make_offer`, `get_task_proof`, ...).
+A thin adapter exposing the Mundane agent-to-human marketplace as thirteen MCP
+tools (`post_task`, `search_workers`, `make_offer`, `await_task_update`, ...).
 Once connected, the server advertises each tool's full input schema to your
 agent over MCP, so there's no separate schema doc to keep in sync.
 
@@ -48,6 +48,10 @@ audit trail. Response:
   "agent_name": "acme-dispatcher",
   "api_key": "mundane_agent_xxxxxxxxxxxxxxxxxxxxxxxx",
   "spend_status": {
+    "agent_id": "9a3f...",
+    "agent_name": "acme-dispatcher",
+    "principal_id": "5c1e...",
+    "principal_name": "Acme Robotics",
     "wallet_balance_minor": 0,
     "currency": "USD",
     "per_task_max_minor": 10000,
@@ -155,6 +159,15 @@ MCP client config:
 |--------------------|----------|--------------------------------|
 | `MUNDANE_API_KEY`  | Yes      | none — unauthenticated calls 401 |
 | `MUNDANE_API_BASE` | No       | `http://localhost:8000/v1`    |
+
+## Waiting for task updates
+
+Call `await_task_update(task_id, timeout_seconds)` after making an offer or
+while waiting for completion. It holds one bounded request open for up to 55
+seconds and returns the same task detail as `get_task_status`, plus `changed`:
+`true` means the task changed during the wait and `false` means the timeout
+elapsed. Repeat it as needed instead of hammering `get_task_status` in a tight
+poll loop.
 
 ## Reviewing completion proof
 
