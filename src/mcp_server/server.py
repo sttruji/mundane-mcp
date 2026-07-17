@@ -55,6 +55,28 @@ async def get_spend_status() -> dict:
 
 
 @mcp.tool()
+async def topup_wallet(
+    amount_minor: int,
+    currency: str = "USD",
+    success_url: str = "https://mundane.market/?topup=success",
+    cancel_url: str = "https://mundane.market/?topup=cancelled",
+    idempotency_key: str | None = None,
+) -> dict:
+    """Create a Stripe Checkout link that adds funds to the principal's wallet.
+    Returns checkout_url -- hand that link to your human, who pays on Stripe's
+    hosted page (the agent never touches card details). The wallet credits
+    automatically once payment completes; confirm with get_spend_status.
+    amount_minor is in the smallest currency unit (500 = $5.00) and currency
+    must match the principal's wallet currency."""
+    headers = {"Idempotency-Key": idempotency_key} if idempotency_key else {}
+    body = {
+        "amount_minor": amount_minor, "currency": currency,
+        "success_url": success_url, "cancel_url": cancel_url,
+    }
+    return await _request("POST", "/wallet/topup", json=body, headers=headers)
+
+
+@mcp.tool()
 async def post_task(
     title: str,
     instructions: str,
