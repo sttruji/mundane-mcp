@@ -203,6 +203,7 @@ async def post_task(
     deadline: str,
     address: str | None = None,
     proof_requirements: list[str] | None = None,
+    proof_requirement_opt_outs: list[str] | None = None,
     currency: str = "USD",
     idempotency_key: str | None = None,
 ) -> dict:
@@ -212,13 +213,21 @@ async def post_task(
     Results in status open, rejected, or screening. Write instructions a stranger
     can execute. `budget_max_minor` is the all-in ceiling in integer minor units
     of `currency`; `deadline` is an ISO 8601 timestamp with a timezone. Latitude
-    and longitude are decimal degrees."""
+    and longitude are decimal degrees.
+
+    The stored proof requirements are the union of each required capability's
+    unwaivable floor, its default proof types, and your `proof_requirements`
+    extras. `proof_requirement_opt_outs` waives a capability *default* where it
+    isn't the product — e.g. `["geo_checkin"]` on a photo task whose location
+    doesn't matter. Waiving a capability floor (like geo check-in on an errand)
+    returns a structured 422; floors are never waivable."""
     body = {
         "title": title, "instructions": instructions,
         "location": {"lat": lat, "lng": lng, "address": address},
         "required_capabilities": required_capabilities,
         "budget_max_minor": budget_max_minor, "currency": currency,
         "deadline": deadline, "proof_requirements": proof_requirements or [],
+        "proof_requirement_opt_outs": proof_requirement_opt_outs or [],
         "idempotency_key": idempotency_key,
     }
     return await _request("POST", "/tasks", json=body)
@@ -247,10 +256,11 @@ async def search_workers(
     `skill` filters on workers' free-form self-declared qualifiers (e.g.
     'welding', 'bio lab support', 'notary') — an open vocabulary, fuzzy-matched
     (case-insensitive, tolerant of typos and word order, and matching a query
-    word inside a multi-word tag). It does not yet bridge synonyms, so 'move
-    boxes' won't find 'lifting heavy items' — prefer the worker's own likely
-    wording, or search without `skill` and read each result's `skills` list to
-    inspect adjacent qualifications."""
+    word inside a multi-word tag). When the marketplace has semantic matching
+    enabled, natural-language queries also bridge synonyms ('move heavy boxes'
+    finds 'lifting heavy items') and a strong semantic match lifts
+    `match_score`; if results look sparse, still try the worker's own likely
+    wording or search without `skill` and read each result's `skills` list."""
     params = {
         "lat": lat, "lng": lng, "radius_km": radius_km, "min_rating": min_rating,
         "min_rating_count": min_rating_count, "limit": limit,
@@ -376,6 +386,47 @@ async def get_task_proof(task_id: str):
         else:
             content.append(image)
     return content
+
+
+@mcp.tool()
+async def update_task(
+    task_id: str,
+    title: str | None = None,
+    instructions: str | None = None,
+    lat: float | None = None,
+    lng: float | None = None,
+    address: str | None = None,
+    required_capabilities: list[str] | None = None,
+    budget_max_minor: int | None = None,
+    deadline: str | None = None,
+    proof_requirements: list[str] | None = None,
+) -> dict:
+    """Amend an unassigned task instead of cancel-and-repost. Supply only the
+    fields to change; at least one is required. Material changes (title,
+    instructions, location, capabilities, proof requirements) re-run the FULL
+    screening cascade — the response's `status` may come back `rejected` — and
+    withdraw any pending offer with an automatic escrow refund. Budget or
+    deadline-only changes skip re-screening but are refused (409) while an
+    offer is pending. Accepted, in-progress, and rejected tasks are immutable;
+    editing them returns 409."""
+    body: dict = {}
+    if title is not None:
+        body["title"] = title
+    if instructions is not None:
+        body["instructions"] = instructions
+    if lat is not None or lng is not None or address is not None:
+        if lat is None or lng is None:
+            raise ValueError("location updates need both lat and lng")
+        body["location"] = {"lat": lat, "lng": lng, "address": address}
+    if required_capabilities is not None:
+        body["required_capabilities"] = required_capabilities
+    if budget_max_minor is not None:
+        body["budget_max_minor"] = budget_max_minor
+    if deadline is not None:
+        body["deadline"] = deadline
+    if proof_requirements is not None:
+        body["proof_requirements"] = proof_requirements
+    return await _request("PATCH", f"/tasks/{task_id}", json=body)
 
 
 @mcp.tool()
