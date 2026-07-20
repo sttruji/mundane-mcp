@@ -244,6 +244,7 @@ async def search_workers(
     min_rating_count: int = 0,
     max_rate_minor: int | None = None,
     limit: int = 20,
+    live_now: bool = False,
 ) -> list | dict:
     """Find verified workers near a point matching capability, rating, and price
     filters, ranked for selection. `ask_rate_minor` is each worker's enforced
@@ -252,6 +253,11 @@ async def search_workers(
     per-task asks for labeled work. When the task fits a label, offer at least
     that entry's `rate_minor`; labels are informational and are not matched or
     enforced by the offer endpoint. Does not commit funds.
+
+    For tasks needing immediate execution, set `live_now=true`; otherwise
+    leave it off. Every result includes `live_now` and `live_until`. Presence
+    is explicit and self-expiring, and live workers receive a ranking lift in
+    ordinary searches.
 
     `skill` filters on workers' free-form self-declared qualifiers (e.g.
     'welding', 'bio lab support', 'notary') — an open vocabulary, fuzzy-matched
@@ -264,6 +270,7 @@ async def search_workers(
     params = {
         "lat": lat, "lng": lng, "radius_km": radius_km, "min_rating": min_rating,
         "min_rating_count": min_rating_count, "limit": limit,
+        "live_now": live_now,
     }
     if capability is not None:
         params["capability"] = capability
@@ -280,7 +287,9 @@ async def get_worker(worker_id: str) -> dict:
     the worker's enforced minimum per-task price in minor units and
     `ask_rate_basis` is `per_task`. `rate_card` entries are advisory asks for
     labeled work; when the task fits a label, offer at least that entry's
-    `rate_minor`. Only the general ask is enforced by the offer endpoint."""
+    `rate_minor`. Only the general ask is enforced by the offer endpoint.
+    `live_now` reports whether the worker is presently live; `live_until` is
+    the timestamp when that explicit presence expires."""
     return await _request("GET", f"/workers/{worker_id}")
 
 
