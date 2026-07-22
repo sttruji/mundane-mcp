@@ -426,6 +426,67 @@ async def make_offer(
     return await _request("POST", "/offers", json=body)
 
 
+MAX_ATTACHMENT_UPLOAD_BYTES = 25 * 1024 * 1024
+# Mirrors the server-side allowlist (app/routers/attachments.py) so obvious
+# refusals fail fast locally without shipping megabytes over the wire.
+ATTACHMENT_EXTENSIONS = frozenset({
+    "stl", "step", "stp", "obj", "3mf", "gcode",
+    "pdf", "txt", "csv", "png", "jpg", "jpeg", "webp",
+})
+
+
+@mcp.tool()
+async def attach_task_file(
+    task_id: str,
+    file_path: str,
+    filename: str | None = None,
+) -> dict:
+    """Attach a working file from local disk to an owned task -- e.g. the
+    STL/STEP model for a 3D-printing task, a spec PDF, or a reference
+    image. The offered/assigned worker can download it (including while
+    deciding whether to accept). Allowed extensions: stl, step, stp, obj,
+    3mf, gcode, pdf, txt, csv, png, jpg, jpeg, webp -- no archives or
+    executables. Caps: 25 MB per file, 10 files per task; uploads are
+    allowed until proof is submitted, deletion only before a worker
+    accepts. `filename` overrides the name shown to the worker (defaults
+    to the file's own name)."""
+    path = os.path.expanduser(file_path)
+    if not os.path.isfile(path):
+        return {"error": True, "detail": f"no such file: {file_path}"}
+    upload_name = filename or os.path.basename(path)
+    extension = upload_name.rsplit(".", 1)[-1].lower() if "." in upload_name else ""
+    if extension not in ATTACHMENT_EXTENSIONS:
+        return {
+            "error": True,
+            "detail": (
+                f"extension '.{extension}' is not allowed; use one of: "
+                + ", ".join(sorted(ATTACHMENT_EXTENSIONS))
+            ),
+        }
+    if os.path.getsize(path) > MAX_ATTACHMENT_UPLOAD_BYTES:
+        return {
+            "error": True,
+            "detail": "file exceeds the 25 MB attachment limit",
+        }
+    with open(path, "rb") as handle:
+        content = handle.read()
+    return await _request(
+        "POST",
+        f"/tasks/{task_id}/attachments",
+        params={"filename": upload_name},
+        content=content,
+        headers={"Content-Type": "application/octet-stream"},
+    )
+
+
+@mcp.tool()
+async def list_task_attachments(task_id: str) -> dict:
+    """List an owned task's attachments: id, filename, content_type,
+    byte_size, and created_at for each file (never the bytes). Use to
+    confirm what the worker can currently download."""
+    return await _request("GET", f"/tasks/{task_id}/attachments")
+
+
 @mcp.tool()
 async def send_chat_message(task_id: str, body: str) -> dict:
     """Send a short coordination message to the worker assigned to an owned
