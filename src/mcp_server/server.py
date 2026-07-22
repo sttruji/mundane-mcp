@@ -13,6 +13,7 @@ import json
 import os
 import re
 import uuid
+from importlib import metadata as importlib_metadata
 from io import BytesIO
 from urllib.parse import urlsplit
 
@@ -132,6 +133,91 @@ async def _fetch_proof_image(path: str) -> MCPImage | dict:
         except ValueError as exc:
             return {"error": True, "status": 422, "detail": str(exc)}
         return MCPImage(data=normalized, format="jpeg")
+
+
+_PACKAGE_NAME = "mundane-mcp"
+_PYPI_JSON_URL = f"https://pypi.org/pypi/{_PACKAGE_NAME}/json"
+_PYPI_TIMEOUT_SECONDS = 10.0
+
+
+def _installed_mcp_version() -> str | None:
+    """Version of the installed mundane-mcp distribution, or None when the
+    server runs from a source checkout without package metadata."""
+    try:
+        return importlib_metadata.version(_PACKAGE_NAME)
+    except importlib_metadata.PackageNotFoundError:
+        return None
+
+
+def _release_tuple(version: object) -> tuple[int, ...] | None:
+    """Parse a plain X.Y.Z release into an int tuple; None when unparseable
+    (pre-releases, local versions, garbage) so callers degrade instead of
+    guessing an ordering."""
+    if not isinstance(version, str) or not version:
+        return None
+    try:
+        return tuple(int(part) for part in version.split("."))
+    except ValueError:
+        return None
+
+
+async def _fetch_latest_pypi_version() -> tuple[str | None, str | None]:
+    """Return (latest_version, error). Uses a bare client on purpose: the
+    shared _client() bakes in the agent's Mundane API key, which must never
+    be sent to a third-party host like PyPI."""
+    try:
+        async with httpx.AsyncClient(timeout=_PYPI_TIMEOUT_SECONDS) as client:
+            response = await client.get(_PYPI_JSON_URL)
+    except Exception as exc:
+        return None, f"PyPI check failed: {exc}"
+    if response.status_code != 200:
+        return None, f"PyPI check failed: HTTP {response.status_code}"
+    try:
+        latest = response.json()["info"]["version"]
+    except Exception:
+        return None, "PyPI check failed: malformed response body"
+    if not isinstance(latest, str) or not latest:
+        return None, "PyPI check failed: malformed response body"
+    return latest, None
+
+
+@mcp.tool()
+async def get_version_info() -> dict:
+    """Report the mundane-mcp server version you are running and whether a
+    newer release exists on PyPI. `installed_version` is read from the
+    installed package metadata (null when running from a source checkout);
+    `latest_version` is PyPI's current release (null when PyPI is
+    unreachable, with the reason in `error`). `update_available` is true or
+    false when both sides are known and comparable, otherwise null. When an
+    update exists, `install_hint` is the exact command for your operator to
+    run — upgrading is an operator action, not something to attempt
+    yourself. Requires no arguments and never contacts the Mundane API."""
+    installed = _installed_mcp_version()
+    latest, error = await _fetch_latest_pypi_version()
+
+    info: dict = {
+        "installed_version": installed,
+        "latest_version": latest,
+        "update_available": None,
+    }
+    if installed is None:
+        info["note"] = (
+            "installed package metadata not found -- likely running from a "
+            "source checkout without `pip install`"
+        )
+    if error is not None:
+        info["error"] = error
+
+    installed_tuple = _release_tuple(installed)
+    latest_tuple = _release_tuple(latest)
+    if installed_tuple is not None and latest_tuple is not None:
+        width = max(len(installed_tuple), len(latest_tuple))
+        installed_padded = installed_tuple + (0,) * (width - len(installed_tuple))
+        latest_padded = latest_tuple + (0,) * (width - len(latest_tuple))
+        info["update_available"] = latest_padded > installed_padded
+        if info["update_available"]:
+            info["install_hint"] = f"pip install --upgrade {_PACKAGE_NAME}"
+    return info
 
 
 @mcp.tool()
