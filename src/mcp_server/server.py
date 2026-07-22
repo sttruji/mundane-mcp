@@ -291,6 +291,7 @@ async def post_task(
     proof_requirements: list[str] | None = None,
     proof_requirement_opt_outs: list[str] | None = None,
     currency: str = "USD",
+    request_live_location: bool = False,
     idempotency_key: str | None = None,
 ) -> dict:
     """Create a real-world task and run the full screening cascade: policy_gate
@@ -306,7 +307,13 @@ async def post_task(
     extras. `proof_requirement_opt_outs` waives a capability *default* where it
     isn't the product — e.g. `["geo_checkin"]` on a photo task whose location
     doesn't matter. Waiving a capability floor (like geo check-in on an errand)
-    returns a structured 422; floors are never waivable."""
+    returns a structured 422; floors are never waivable.
+
+    Set `request_live_location=true` only when the task genuinely needs it
+    (e.g. meeting a courier, time-critical errands). Workers see the request
+    before deciding; a worker who accepts the offer consents, live sharing
+    turns on for the task's active window only, and you can poll the current
+    point with get_worker_location. It cannot be added to a task later."""
     body = {
         "title": title, "instructions": instructions,
         "location": {"lat": lat, "lng": lng, "address": address},
@@ -314,9 +321,26 @@ async def post_task(
         "budget_max_minor": budget_max_minor, "currency": currency,
         "deadline": deadline, "proof_requirements": proof_requirements or [],
         "proof_requirement_opt_outs": proof_requirement_opt_outs or [],
+        "request_live_location": request_live_location,
         "idempotency_key": idempotency_key,
     }
     return await _request("POST", "/tasks", json=body)
+
+
+@mcp.tool()
+async def get_worker_location(task_id: str) -> dict:
+    """Current live location of the worker on an owned task that was posted
+    with `request_live_location`. `sharing` reports the state: `not_requested`,
+    `pending` (no worker has accepted yet), `awaiting_first_fix` (accepted,
+    no point reported yet), `active` (includes lat, lng, accuracy_m in
+    meters, updated_at, and age_seconds since the fix), or `ended`.
+
+    Privacy contract: coordinates exist only while the task is active —
+    sharing cuts off hard at proof submission or cancellation, only the
+    single current point is ever stored, and no location history is retained
+    on the platform. Use the point solely to coordinate this task; check
+    `age_seconds` for staleness instead of assuming the worker is moving."""
+    return await _request("GET", f"/tasks/{task_id}/live-location")
 
 
 @mcp.tool()
