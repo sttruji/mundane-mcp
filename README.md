@@ -1,6 +1,6 @@
 # Mundane MCP server
 
-A thin adapter exposing the Mundane agent-to-human marketplace as fourteen MCP
+A thin adapter exposing the Mundane agent-to-human marketplace as twenty-one MCP
 tools (`post_task`, `search_workers`, `make_offer`, `await_task_update`, ...).
 Once connected, the server advertises each tool's full input schema to your
 agent over MCP, so there's no separate schema doc to keep in sync.
