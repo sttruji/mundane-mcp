@@ -1,15 +1,24 @@
 [project]
 name = "mundane-mcp"
-version = "0.1.9"
+version = "0.1.10"
 description = "MCP server exposing the Mundane agent-to-human marketplace as tools for any MCP-capable agent."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Mundane" }]
 keywords = ["mcp", "model-context-protocol", "mundane", "marketplace", "agents"]
+# Apache-2.0 covers THIS adapter only. It is a thin client for the public REST
+# API and carries none of the marketplace backend, which stays private; API
+# access is governed by the Terms of Service regardless of this license. Apache
+# rather than MIT for the express patent grant and because section 6 withholds
+# trademark rights, so the Mundane name is not licensed along with the code.
+#
+# Declared as a PEP 639 SPDX expression, which setuptools rejects if a legacy
+# "License ::" classifier is also present — hence no license classifier below.
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 classifiers = [
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: Other/Proprietary License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
 ]
@@ -34,7 +43,8 @@ Homepage = "https://mundane.market"
 mundane-mcp = "mcp_server.server:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+# >=77 for PEP 639 support (`license` as an SPDX expression + `license-files`).
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

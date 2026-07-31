@@ -206,6 +206,19 @@ PYTHONPATH=mcp_server/src python -m unittest discover -s mcp_server/tests -v
 pip-compile requirements.in --output-file requirements.txt --generate-hashes
 ```
 
-Commit both files. `pyproject.toml`'s `dependencies` mirrors `requirements.in`
-(loose constraints, for `pip install .` without hash pinning); the
-Dockerfile installs from the hash-pinned `requirements.txt`.
+Commit both files. The Dockerfile installs from the hash-pinned
+`requirements.txt`; `pip install mundane-mcp` resolves `pyproject.toml`'s
+`dependencies` instead. Those two paths are independent, so keep an upper bound
+on anything whose next major release could move an import — an unbounded
+`mcp>=1.2` let the SDK's 2.0.0 release break every fresh pip install for two
+versions while Docker builds and CI stayed green.
+
+## License
+
+[Apache-2.0](LICENSE).
+
+This covers the MCP adapter only. It is a thin client for the public Mundane
+REST API and contains none of the marketplace backend. Use of the API itself is
+governed by the [Terms of Service](https://mundane.market/policies/terms) and the
+[Acceptable Use Policy](https://mundane.market/policies/aup), and the license
+grants no rights to the Mundane name or marks.
