@@ -73,7 +73,14 @@ PRIVATE_KEY="$(openssl ec -in "$KEY_FILE" -noout -text 2>/dev/null \
   | grep -A4 "priv:" | tail -n +2 | tr -d ' :\n')"
 
 echo "Authenticating against $DOMAIN via DNS..."
-mcp-publisher login dns --domain "$DOMAIN" --private-key "$PRIVATE_KEY"
+# --algorithm is not optional here. The CLI defaults to ed25519 and will try to
+# read our 48-byte P-384 key as a 32-byte ed25519 seed, failing with
+# "invalid seed length: expected 32 bytes, got 48". The algorithm must also match
+# the `k=` field of the TXT record on the apex.
+mcp-publisher login dns \
+  --domain "$DOMAIN" \
+  --algorithm ecdsap384 \
+  --private-key "$PRIVATE_KEY"
 
 cd "$HERE"
 mcp-publisher publish
