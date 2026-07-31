@@ -6,6 +6,11 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# Ownership proof for the official MCP Registry: it reads this annotation off
+# the pushed image and requires it to equal `name` in server.json. Keep the two
+# in sync — mcp_server/tests/test_registry_metadata.py asserts it.
+LABEL io.modelcontextprotocol.server.name="market.mundane/mundane"
+
 WORKDIR /srv/mundane-mcp
 
 RUN addgroup --system app && adduser --system --ingroup app appuser
