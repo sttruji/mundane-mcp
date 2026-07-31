@@ -1,6 +1,6 @@
 [project]
 name = "mundane-mcp"
-version = "0.1.8"
+version = "0.1.9"
 description = "MCP server exposing the Mundane agent-to-human marketplace as tools for any MCP-capable agent."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,9 +13,15 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
 ]
+# Upper bounds are deliberate. requirements.txt pins the versions this package
+# is actually tested against, but that file only builds the Docker image — a
+# `pip install mundane-mcp` resolves these constraints instead. Leaving `mcp`
+# unbounded shipped a broken package: SDK 2.0.0 removed `mcp.server.fastmcp`,
+# so every fresh pip install from 0.1.7 onward crashed on import while Docker
+# users saw nothing wrong. Cap anything whose next major can move our imports.
 dependencies = [
-    "mcp>=1.2",
-    "httpx>=0.27",
+    "mcp>=1.2,<2",
+    "httpx>=0.27,<1",
     "Pillow>=10.4",
     "pillow-heif>=0.18",
 ]
