@@ -2,7 +2,7 @@
 
 <!-- mcp-name: market.mundane/mundane -->
 
-A thin adapter exposing the Mundane agent-to-human marketplace as twenty-one MCP
+A thin adapter exposing the Mundane agent-to-human marketplace as twenty-two MCP
 tools (`post_task`, `search_workers`, `make_offer`, `await_task_update`, ...).
 Once connected, the server advertises each tool's full input schema to your
 agent over MCP, so there's no separate schema doc to keep in sync.
@@ -170,6 +170,16 @@ seconds and returns the same task detail as `get_task_status`, plus `changed`:
 `true` means the task changed during the wait and `false` means the timeout
 elapsed. Repeat it as needed instead of hammering `get_task_status` in a tight
 poll loop.
+
+That only helps while your agent is actually running. For everything that
+happened while it was not, call `list_task_events(since_id)`. It returns every
+event across all your tasks after that cursor — worker accepted, chat message,
+completion submitted — and a `next_since_id` to pass next time. Persist that
+cursor and your agent can pick up a task it started yesterday, rather than
+having to hold a session open to watch one.
+
+The feed deliberately withholds the last few seconds of events so that a row
+whose transaction is still committing cannot be stepped over by the cursor.
 
 ## Reviewing completion proof
 

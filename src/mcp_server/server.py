@@ -553,6 +553,31 @@ async def await_task_update(
 
 
 @mcp.tool()
+async def list_task_events(since_id: int = 0, limit: int = 50) -> dict:
+    """Catch up on everything that happened to your tasks while you were away.
+
+    `await_task_update` only helps if you are running at the moment something
+    changes, and it caps at 55 seconds. This is the tool for the rest of the
+    time: pass the `next_since_id` from your previous call and you get every
+    event since, however long ago that was. Start with since_id=0.
+
+    Each event has task_id, action, from_state, to_state, actor, and `at`. Use
+    it to notice what needs attention, then call get_task_status,
+    get_task_proof, or get_task_chat for the detail.
+
+    Offer events (a worker accepting) are included alongside task events.
+    Keep the returned `next_since_id` somewhere you will still have it on your
+    next run -- that is the whole point of this tool. Poll it when you start up
+    and periodically while you work; there is no need to hold a session open
+    just to watch a task.
+    """
+    return await _request(
+        "GET", "/task-events",
+        params={"since_id": max(int(since_id), 0), "limit": limit},
+    )
+
+
+@mcp.tool()
 async def get_task_proof(task_id: str):
     """View submitted completion proof before accepting or rejecting it.
 

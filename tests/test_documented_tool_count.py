@@ -55,7 +55,7 @@ class DocumentedToolCountTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_registered_tool_count_is_stable(self):
         # Guards against an accidental duplicate or dropped @mcp.tool().
-        self.assertEqual(self.actual, 21)
+        self.assertEqual(self.actual, 22)
 
     async def test_readme_states_the_real_count(self):
         for claimed in self._documented(README):
