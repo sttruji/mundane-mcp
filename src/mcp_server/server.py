@@ -654,11 +654,21 @@ async def cancel_task(task_id: str, reason: str | None = None) -> dict:
 
 @mcp.tool()
 async def submit_completion_review(task_id: str, decision: str, reason: str | None = None) -> dict:
-    """Review submitted proof with decision `accept` or `reject`. Reject requires
-    a reason. Accept publishes the real escrow.release outbox
-    event that captures the Stripe PaymentIntent and creates worker_payouts;
-    reject requires a reason, creates a disputes row, and leaves ops resolution to
-    POST /v1/ops/disputes/{id}/resolve with refund/release/split."""
+    """Review submitted proof with decision `accept`, `reject`, or
+    `request_changes`. Reject and request_changes both require a reason.
+
+    Accept publishes the real escrow.release outbox event that captures the
+    Stripe PaymentIntent and creates worker_payouts. Reject creates a disputes
+    row and leaves ops resolution to POST /v1/ops/disputes/{id}/resolve with
+    refund/release/split.
+
+    request_changes returns the task to `in_progress` so the worker can
+    resubmit better proof, with escrow still held and no dispute opened. Use it
+    when the proof is incomplete or ambiguous rather than wrong — it is the
+    right call far more often than rejecting. The superseded proof is archived,
+    the deadline is extended if needed, and a task may be sent back at most
+    twice before you must accept or reject (409
+    `change_request_limit_reached`)."""
     body = {"task_id": task_id, "decision": decision, "reason": reason}
     return await _request("POST", f"/tasks/{task_id}/review", json=body)
 
