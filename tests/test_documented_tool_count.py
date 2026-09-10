@@ -61,6 +61,35 @@ class DocumentedToolCountTests(unittest.IsolatedAsyncioTestCase):
         for claimed in self._documented(README):
             self.assertEqual(claimed, self.actual)
 
+    async def test_the_readme_documents_every_tool_by_name(self):
+        """The count being right is not the same as the list being complete.
+
+        This guard matched a number word near "tools" and nothing else, so it
+        passed while the README described nine of twenty-two. That file is what
+        PyPI renders and what a developer evaluating mundane-mcp reads first;
+        `cancel_task`, `topup_wallet`, `update_task` and ten others existed and
+        were undocumented.
+        """
+        text = README.read_text(encoding="utf-8")
+        registered = {t.name for t in await server.mcp.list_tools()}
+        missing = sorted(n for n in registered if f"`{n}`" not in text)
+        self.assertEqual(
+            missing, [],
+            f"{README.relative_to(REPO_ROOT)} does not mention: "
+            f"{', '.join(missing)}. Add them to the Tools table.",
+        )
+
+    async def test_the_readme_invents_no_tools(self):
+        """The other direction: a tool that was renamed or removed leaves a
+        table row promising something the server will not answer."""
+        import re
+        registered = {t.name for t in await server.mcp.list_tools()}
+        documented = set(re.findall(r"^\| `([a-z_]+)` \|", README.read_text(encoding="utf-8"), re.M))
+        self.assertEqual(
+            sorted(documented - registered), [],
+            "README documents tools the server does not register",
+        )
+
     async def test_public_pages_state_the_real_count(self):
         for path in (FOR_AGENTS, LANDING):
             for claimed in self._documented(path):

@@ -12,6 +12,58 @@ agent operator — the same way you'd run a filesystem or database MCP
 server locally — not a service Mundane operates centrally. One running
 process is tied to exactly one agent's API key for its whole lifetime.
 
+## Tools
+
+All twenty-two, grouped by when you reach for them. Each tool advertises
+its full input schema over MCP, so this table is orientation rather than
+a substitute for the schema your client already sees.
+
+### Finding and hiring
+
+| Tool | What it does |
+| --- | --- |
+| `list_capabilities` | List task capabilities this agent may dispatch, with per-capability |
+| `search_workers` | Find verified workers near a point matching capability, rating, and price |
+| `get_worker` | Return one worker's public profile and reputation. `ask_rate_minor` is |
+| `post_task` | Create a real-world task and run the full screening cascade: policy_gate |
+| `update_task` | Amend an unassigned task instead of cancel-and-repost. Supply only the |
+| `make_offer` | Offer a task to a worker. `amount_minor` is the worker's per-task amount |
+| `cancel_task` | Cancel a task and any pending offer. An accepted task may charge the |
+
+### Following a task
+
+| Tool | What it does |
+| --- | --- |
+| `get_task_status` | Get task lifecycle state, active offer, assigned worker, completion proof, |
+| `await_task_update` | Wait `timeout_seconds` (capped at 55 seconds) for an owned task to change, |
+| `list_task_events` | Catch up on everything that happened to your tasks while you were away |
+| `get_worker_location` | Current live location of the worker on an owned task that was posted |
+
+### Talking to the worker
+
+| Tool | What it does |
+| --- | --- |
+| `send_chat_message` | Send a short coordination message to the worker assigned to an owned |
+| `get_task_chat` | Read the chat thread on an owned task. Returns `channel` |
+| `attach_task_file` | Attach a working file from local disk to an owned task -- e.g. the |
+| `list_task_attachments` | List an owned task's attachments: id, filename, content_type, |
+
+### Closing it out
+
+| Tool | What it does |
+| --- | --- |
+| `get_task_proof` | View submitted completion proof before accepting or rejecting it |
+| `submit_completion_review` | Review submitted proof with decision `accept`, `reject`, or |
+| `submit_rating` | Rate a completed task once with an integer score from 1 through 5 and a |
+| `submit_experience_feedback` | Explicitly submit post-task experience feedback to Mundane. Phrase |
+
+### Account
+
+| Tool | What it does |
+| --- | --- |
+| `get_spend_status` | Return the authenticated agent and principal identity, wallet balance, |
+| `topup_wallet` | Create a Stripe Checkout link that adds funds to the principal's wallet |
+| `get_version_info` | Report the mundane-mcp server version you are running and whether a |
 ## Prerequisites
 
 - The base URL of the Mundane REST API you're targeting
