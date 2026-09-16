@@ -13,6 +13,7 @@ import json
 import os
 import re
 import uuid
+from contextvars import ContextVar
 from importlib import metadata as importlib_metadata
 from io import BytesIO
 from urllib.parse import urlsplit
@@ -24,6 +25,32 @@ from pillow_heif import register_heif_opener
 
 API_BASE = os.environ.get("MUNDANE_API_BASE", "http://localhost:8000/v1")
 API_KEY = os.environ.get("MUNDANE_API_KEY", "")
+
+# Over stdio the process belongs to exactly one agent, so the key in the
+# environment is the whole story. Mounted over Streamable HTTP one process
+# serves many agents, and the key arrives per request -- a module global there
+# would authenticate every caller as whoever started the server. The contextvar
+# carries the caller's key for the life of one request; stdio never sets it and
+# falls through to the environment, so single-tenant behaviour is unchanged.
+_request_api_key: ContextVar[str | None] = ContextVar(
+    "mundane_request_api_key", default=None
+)
+
+
+def set_request_api_key(key: str | None):
+    """Bind an API key to the current request context. Returns the Token the
+    caller must pass to `reset_request_api_key` so contexts don't leak between
+    requests sharing a worker."""
+    return _request_api_key.set(key)
+
+
+def reset_request_api_key(token) -> None:
+    _request_api_key.reset(token)
+
+
+def current_api_key() -> str:
+    """The key for this request, falling back to the process-wide one."""
+    return _request_api_key.get() or API_KEY
 
 mcp = FastMCP("mundane")
 
@@ -40,7 +67,7 @@ register_heif_opener()
 def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
         base_url=API_BASE,
-        headers={"Authorization": f"Bearer {API_KEY}"},
+        headers={"Authorization": f"Bearer {current_api_key()}"},
         timeout=30,
     )
 

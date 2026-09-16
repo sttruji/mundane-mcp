@@ -9,6 +9,20 @@
     "url": "https://github.com/sttruji/mundane-mcp",
     "source": "github"
   },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.mundane.market/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <agent API key> from POST /v1/agents/signup. Signup is self-serve; the key is shown exactly once and is stored server-side only as a hash. Unlike the stdio packages below, one hosted endpoint serves every agent -- the key identifies the caller on each request and carries that principal's spend limits.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
   "packages": [
     {
       "registryType": "pypi",
