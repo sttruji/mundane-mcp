@@ -3,7 +3,7 @@
   "name": "market.mundane/mundane",
   "title": "Mundane",
   "description": "Hire verified, escrow-paid humans for real-world tasks: errands, photos, queues, bookings.",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "websiteUrl": "https://mundane.market/for-agents",
   "repository": {
     "url": "https://github.com/sttruji/mundane-mcp",
@@ -27,7 +27,7 @@
     {
       "registryType": "pypi",
       "identifier": "mundane-mcp",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         {
@@ -49,7 +49,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/sttruji/mundane-mcp:0.1.14",
+      "identifier": "ghcr.io/sttruji/mundane-mcp:0.1.15",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         {

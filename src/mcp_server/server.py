@@ -14,7 +14,7 @@ import os
 import re
 import uuid
 from contextvars import ContextVar
-from typing import Annotated
+from typing import Annotated, Any, TypedDict
 from importlib import metadata as importlib_metadata
 from io import BytesIO
 from urllib.parse import urlsplit
@@ -54,6 +54,136 @@ def reset_request_api_key(token) -> None:
 def current_api_key() -> str:
     """The key for this request, falling back to the process-wide one."""
     return _request_api_key.get() or API_KEY
+
+# --- Output shapes -----------------------------------------------------------
+#
+# Declared so agents get a structured-output schema instead of an opaque dict.
+# Three rules make these safe, and breaking any one of them breaks live tool
+# calls rather than merely degrading them:
+#
+#   1. total=False, so a field the API omits is fine.
+#   2. Extra keys are permitted, which is what lets `_request` keep handing back
+#      {"error": True, "status": ..., "detail": ...} verbatim on any 4xx/5xx.
+#      Every tool can return that instead of its normal shape.
+#   3. Every field is `| None`, because a *wrong type* is the one thing
+#      FastMCP's model_validate rejects -- and several of these really do come
+#      back null (a task with no offer yet, a worker who is not live).
+#
+# Only shapes observed from real responses are declared here. Tools whose
+# output was not captured keep `dict`, which yields no schema but cannot break.
+# List-returning tools are deliberately excluded: annotating them would make
+# FastMCP wrap the result as {"result": [...]}, changing what callers receive.
+
+
+class SpendStatusOut(TypedDict, total=False):
+    agent_id: str | None
+    agent_name: str | None
+    principal_id: str | None
+    principal_name: str | None
+    wallet_balance_minor: int | None
+    currency: str | None
+    per_task_max_minor: int | None
+    remaining_daily_minor: int | None
+    remaining_weekly_minor: int | None
+    remaining_monthly_minor: int | None
+    open_tasks: int | None
+    max_open_tasks: int | None
+    offers_remaining_this_hour: int | None
+
+
+class WorkerOut(TypedDict, total=False):
+    worker_id: str | None
+    handle: str | None
+    verification_status: str | None
+    live_until: str | None
+    live_now: bool | None
+    rating: float | None
+    rating_count: int | None
+    completed_tasks: int | None
+    ask_rate_minor: int | None
+    ask_rate_basis: str | None
+    currency: str | None
+    has_vehicle: bool | None
+    languages: list[Any] | None
+    skills: list[Any] | None
+    rate_card: list[Any] | None
+
+
+class TaskWriteOut(TypedDict, total=False):
+    """post_task and update_task both answer with this."""
+    task_id: str | None
+    # str on success; int when this is the {"error": True, "status": 4xx}
+    # envelope _request returns, which every tool can surface.
+    status: str | int | None
+    screening_reason: str | None
+
+
+class TaskStatusOut(TypedDict, total=False):
+    task_id: str | None
+    # str on success; int when this is the {"error": True, "status": 4xx}
+    # envelope _request returns, which every tool can surface.
+    status: str | int | None
+    offer: dict[str, Any] | None
+    worker: dict[str, Any] | None
+    completion: dict[str, Any] | None
+    timeline: list[Any] | None
+
+
+class TaskChatOut(TypedDict, total=False):
+    task_id: str | None
+    channel: str | None
+    task_status: str | None
+    messages: list[Any] | None
+    remaining_messages: int | None
+
+
+class TaskAttachmentsOut(TypedDict, total=False):
+    task_id: str | None
+    attachments: list[Any] | None
+
+
+class TaskEventsOut(TypedDict, total=False):
+    events: list[Any] | None
+    next_since_id: int | None
+    has_more: bool | None
+
+
+class OfferOut(TypedDict, total=False):
+    offer_id: str | None
+    # str on success; int when this is the {"error": True, "status": 4xx}
+    # envelope _request returns, which every tool can surface.
+    status: str | int | None
+    escrow_hold_id: str | None
+    expires_at: str | None
+    platform_fee_minor: int | None
+
+
+class TopupOut(TypedDict, total=False):
+    topup_id: str | None
+    checkout_url: str | None
+    checkout_session_id: str | None
+    # str on success; int when this is the {"error": True, "status": 4xx}
+    # envelope _request returns, which every tool can surface.
+    status: str | int | None
+
+
+class CancelOut(TypedDict, total=False):
+    task_id: str | None
+    # str on success; int when this is the {"error": True, "status": 4xx}
+    # envelope _request returns, which every tool can surface.
+    status: str | int | None
+    was_accepted: bool | None
+    fee_minor: int | None
+
+
+class VersionInfoOut(TypedDict, total=False):
+    installed_version: str | None
+    latest_version: str | None
+    update_available: bool | None
+    install_hint: str | None
+    note: str | None
+    error: str | bool | None
+
 
 _PACKAGE_NAME = "mundane-mcp"
 
@@ -260,7 +390,7 @@ async def _fetch_latest_pypi_version() -> tuple[str | None, str | None]:
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def get_version_info() -> dict:
+async def get_version_info() -> VersionInfoOut:
     """Report the mundane-mcp server version you are running and whether a
     newer release exists on PyPI. `installed_version` is read from the
     installed package metadata (null when running from a source checkout);
@@ -318,7 +448,7 @@ async def list_capabilities() -> list | dict:
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def get_spend_status() -> dict:
+async def get_spend_status() -> SpendStatusOut:
     """Return the authenticated agent and principal identity, wallet balance,
     and remaining headroom against every spend cap. Money fields are integer
     minor units in the returned currency. Consult before making offers."""
@@ -338,7 +468,7 @@ async def topup_wallet(
     success_url: Annotated[str, Field(description="Where Stripe sends the payer after a successful payment.")] = "https://mundane.market/?topup=success",
     cancel_url: Annotated[str, Field(description="Where Stripe sends the payer if they abandon checkout.")] = "https://mundane.market/?topup=cancelled",
     idempotency_key: Annotated[str | None, Field(description="Optional key of your own choosing so a retry reuses the existing checkout instead of opening a second one.")] = None,
-) -> dict:
+) -> TopupOut:
     """Create a Stripe Checkout link that adds funds to the principal's wallet.
     Returns checkout_url -- hand that link to your human, who pays on Stripe's
     hosted page (the agent never touches card details). The wallet credits
@@ -401,7 +531,7 @@ async def post_task(
     currency: Annotated[str, Field(description="ISO-4217 currency code. USD is the only currency supported today.")] = "USD",
     request_live_location: Annotated[bool, Field(description="Ask the worker to share live location while working. They must consent; it is never automatic.")] = False,
     idempotency_key: Annotated[str | None, Field(description="Optional key of your own choosing so a retry does not post the task twice.")] = None,
-) -> dict:
+) -> TaskWriteOut:
     """Create a real-world task and run the full screening cascade: policy_gate
     regex, task_shapes shape_match, a Claude LLM classifier when ANTHROPIC_API_KEY is set
     or SCREENING_LLM_FALLBACK when absent, then human_review parking when needed.
@@ -522,7 +652,7 @@ async def search_workers(
 ))
 async def get_worker(
     worker_id: Annotated[str, Field(description="The worker's id, as returned by search_workers.")],
-) -> dict:
+) -> WorkerOut:
     """Return one worker's public profile and reputation. `ask_rate_minor` is
     the worker's enforced minimum per-task price in minor units and
     `ask_rate_basis` is `per_task`. `rate_card` entries are advisory asks for
@@ -548,7 +678,7 @@ async def make_offer(
     expires_in_seconds: Annotated[int, Field(description="How long the worker has to accept before the offer lapses. Default is 24 hours.")] = 86400,
     message: Annotated[str | None, Field(description="Optional note sent to the worker with the offer.")] = None,
     idempotency_key: Annotated[str | None, Field(description="Optional key of your own choosing so a retry does not create a second offer or hold escrow twice.")] = None,
-) -> dict:
+) -> OfferOut:
     """Offer a task to a worker. `amount_minor` is the worker's per-task amount
     in integer minor units of `currency`; the platform fee is added on top.
     `expires_in_seconds` is the pending-offer lifetime in seconds. On success,
@@ -630,7 +760,7 @@ async def attach_task_file(
 ))
 async def list_task_attachments(
     task_id: Annotated[str, Field(description="The owned task whose attachments you want listed.")],
-) -> dict:
+) -> TaskAttachmentsOut:
     """List an owned task's attachments: id, filename, content_type,
     byte_size, and created_at for each file (never the bytes). Use to
     confirm what the worker can currently download."""
@@ -670,7 +800,7 @@ async def send_chat_message(
 async def get_task_chat(
     task_id: Annotated[str, Field(description="The owned task whose thread you are reading.")],
     after_id: Annotated[int, Field(description="Return only messages after this id. Pass 0 for the whole thread, then the highest id you saw to poll for new ones.")] = 0,
-) -> dict:
+) -> TaskChatOut:
     """Read the chat thread on an owned task. Returns `channel`
     (open/closed), `task_status`, your `remaining_messages`, and `messages`
     ordered oldest-first, each with an integer id, sender_type
@@ -700,7 +830,7 @@ async def get_task_chat(
 ))
 async def get_task_status(
     task_id: Annotated[str, Field(description="The owned task to inspect.")],
-) -> dict:
+) -> TaskStatusOut:
     """Get task lifecycle state, active offer, assigned worker, completion proof,
     and timeline. Offer amounts are integer minor units and timestamps are ISO
     8601 strings. Timeline includes screened:<outcome> entries from the screening
@@ -744,7 +874,7 @@ async def await_task_update(
 async def list_task_events(
     since_id: Annotated[int, Field(description="Return events after this id. Pass 0 the first time, then the next_since_id from your previous call.")] = 0,
     limit: Annotated[int, Field(description="Maximum number of events to return in one call.")] = 50,
-) -> dict:
+) -> TaskEventsOut:
     """Catch up on everything that happened to your tasks while you were away.
 
     `await_task_update` only helps if you are running at the moment something
@@ -846,7 +976,7 @@ async def update_task(
     budget_max_minor: Annotated[int | None, Field(description="New maximum spend in integer minor units, or omit to leave it unchanged.")] = None,
     deadline: Annotated[str | None, Field(description="New deadline, ISO-8601 UTC, or omit to leave it unchanged.")] = None,
     proof_requirements: Annotated[list[str] | None, Field(description="Replacement proof requirements, or omit to leave them unchanged.")] = None,
-) -> dict:
+) -> TaskWriteOut:
     """Amend an unassigned task instead of cancel-and-repost. Supply only the
     fields to change; at least one is required. Material changes (title,
     instructions, location, capabilities, proof requirements) re-run the FULL
@@ -885,7 +1015,7 @@ async def update_task(
 async def cancel_task(
     task_id: Annotated[str, Field(description="The task to cancel, along with any offer still pending on it.")],
     reason: Annotated[str | None, Field(description="Why you are cancelling. Shown to the worker, and worth giving if they had already accepted -- a cancellation fee may be charged.")] = None,
-) -> dict:
+) -> CancelOut:
     """Cancel a task and any pending offer. An accepted task may charge the
     configured cancellation fee, returned as integer `fee_minor` units."""
     return await _request("POST", f"/tasks/{task_id}/cancel", json={"reason": reason})
