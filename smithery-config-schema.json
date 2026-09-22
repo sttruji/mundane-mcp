@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "properties": {
+    "apiKey": {
+      "type": "string",
+      "title": "Mundane agent API key",
+      "description": "Required to post tasks, make offers or spend. Browsing the tool list works without it. Get one free and self-serve from POST /v1/agents/signup — the key starts with mundane_agent_. Details at https://mundane.market/for-agents",
+      "x-from": { "header": "mundane-api-key" },
+      "x-to": { "header": "Authorization" }
+    }
+  }
+}

@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from mcp.server.fastmcp import FastMCP, Image as MCPImage
+from mcp.types import Icon as MCPIcon, ToolAnnotations
 from PIL import Image as PILImage, ImageOps, UnidentifiedImageError
 from pillow_heif import register_heif_opener
 
@@ -52,7 +53,57 @@ def current_api_key() -> str:
     """The key for this request, falling back to the process-wide one."""
     return _request_api_key.get() or API_KEY
 
-mcp = FastMCP("mundane")
+_PACKAGE_NAME = "mundane-mcp"
+
+
+def _installed_mcp_version() -> str | None:
+    """Version of the installed mundane-mcp distribution, or None when the
+    server runs from a source checkout without package metadata."""
+    try:
+        return importlib_metadata.version(_PACKAGE_NAME)
+    except importlib_metadata.PackageNotFoundError:
+        return None
+
+
+mcp = FastMCP(
+    "mundane",
+    # Sent in the initialize response, so this is what a client sees before it
+    # has called anything -- and what directories render as the description.
+    instructions=(
+        "Hire ID-verified people for work that needs hands, eyes, or physical "
+        "presence: errands, photographing a real place, queue-sitting, "
+        "in-person bookings.\n\n"
+        "Post a task with a location, budget, deadline and the capabilities it "
+        "needs; search for workers near that point; make an escrow-backed "
+        "offer. Money is held until you review proof of completion, and you "
+        "can send the work back for changes rather than rejecting it outright."
+        "\n\n"
+        "Start with list_capabilities to see what may be dispatched and "
+        "get_spend_status for the wallet balance and remaining caps. Money is "
+        "always integer minor units with an ISO-4217 currency."
+    ),
+    website_url="https://mundane.market/for-agents",
+    # Only two real images are served from the site root -- several other
+    # plausible names (icon-512.png, logo.png) fall through to the SPA and
+    # return HTML, which would render as a broken icon.
+    icons=[
+        MCPIcon(
+            src="https://mundane.market/favicon.png",
+            mimeType="image/png",
+            sizes=["192x192"],
+        ),
+        MCPIcon(
+            src="https://mundane.market/apple-touch-icon.png",
+            mimeType="image/png",
+            sizes=["180x180"],
+        ),
+    ],
+)
+# FastMCP takes no version argument and the low-level server leaves it unset,
+# so the handshake was reporting the MCP SDK's version (1.28.1) as if it were
+# ours. Report the package version instead, which is what a client or a
+# directory listing is actually asking for.
+mcp._mcp_server.version = _installed_mcp_version()
 
 MAX_PROOF_DOWNLOAD_BYTES = 8 * 1024 * 1024
 MAX_PROOF_OUTPUT_BYTES = 2 * 1024 * 1024
@@ -162,18 +213,10 @@ async def _fetch_proof_image(path: str) -> MCPImage | dict:
         return MCPImage(data=normalized, format="jpeg")
 
 
-_PACKAGE_NAME = "mundane-mcp"
 _PYPI_JSON_URL = f"https://pypi.org/pypi/{_PACKAGE_NAME}/json"
 _PYPI_TIMEOUT_SECONDS = 10.0
 
 
-def _installed_mcp_version() -> str | None:
-    """Version of the installed mundane-mcp distribution, or None when the
-    server runs from a source checkout without package metadata."""
-    try:
-        return importlib_metadata.version(_PACKAGE_NAME)
-    except importlib_metadata.PackageNotFoundError:
-        return None
 
 
 def _release_tuple(version: object) -> tuple[int, ...] | None:
@@ -208,7 +251,13 @@ async def _fetch_latest_pypi_version() -> tuple[str | None, str | None]:
     return latest, None
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get version info",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def get_version_info() -> dict:
     """Report the mundane-mcp server version you are running and whether a
     newer release exists on PyPI. `installed_version` is read from the
@@ -247,14 +296,26 @@ async def get_version_info() -> dict:
     return info
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="List capabilities",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def list_capabilities() -> list | dict:
     """List task capabilities this agent may dispatch, with per-capability
     constraints and required proof types. Call before posting a task."""
     return await _request("GET", "/capabilities")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get spend status",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def get_spend_status() -> dict:
     """Return the authenticated agent and principal identity, wallet balance,
     and remaining headroom against every spend cap. Money fields are integer
@@ -262,7 +323,13 @@ async def get_spend_status() -> dict:
     return await _request("GET", "/spend-status")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Top up the wallet",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def topup_wallet(
     amount_minor: int,
     currency: str = "USD",
@@ -284,7 +351,13 @@ async def topup_wallet(
     return await _request("POST", "/wallet/topup", json=body, headers=headers)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Send feedback",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def submit_experience_feedback(
     gap_text: str,
     tags: list[str] | None = None,
@@ -305,7 +378,13 @@ async def submit_experience_feedback(
     return await _request("POST", "/agents/feedback", json=body)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Post a task",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def post_task(
     title: str,
     instructions: str,
@@ -354,7 +433,13 @@ async def post_task(
     return await _request("POST", "/tasks", json=body)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get worker location",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def get_worker_location(task_id: str) -> dict:
     """Current live location of the worker on an owned task that was posted
     with `request_live_location`. `sharing` reports the state: `not_requested`,
@@ -370,7 +455,13 @@ async def get_worker_location(task_id: str) -> dict:
     return await _request("GET", f"/tasks/{task_id}/live-location")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Search workers",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def search_workers(
     lat: float,
     lng: float,
@@ -418,7 +509,13 @@ async def search_workers(
     return await _request("GET", "/workers", params=params)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get worker profile",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def get_worker(worker_id: str) -> dict:
     """Return one worker's public profile and reputation. `ask_rate_minor` is
     the worker's enforced minimum per-task price in minor units and
@@ -430,7 +527,13 @@ async def get_worker(worker_id: str) -> dict:
     return await _request("GET", f"/workers/{worker_id}")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Make an offer",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def make_offer(
     task_id: str,
     worker_id: str,
@@ -462,7 +565,13 @@ ATTACHMENT_EXTENSIONS = frozenset({
 })
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Attach a file",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def attach_task_file(
     task_id: str,
     file_path: str,
@@ -506,7 +615,13 @@ async def attach_task_file(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="List task attachments",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def list_task_attachments(task_id: str) -> dict:
     """List an owned task's attachments: id, filename, content_type,
     byte_size, and created_at for each file (never the bytes). Use to
@@ -514,7 +629,13 @@ async def list_task_attachments(task_id: str) -> dict:
     return await _request("GET", f"/tasks/{task_id}/attachments")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Send a chat message",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def send_chat_message(task_id: str, body: str) -> dict:
     """Send a short coordination message to the worker assigned to an owned
     task ("the side door is locked", "leave it with the receptionist").
@@ -528,7 +649,13 @@ async def send_chat_message(task_id: str, body: str) -> dict:
     return await _request("POST", f"/tasks/{task_id}/chat", json={"body": body})
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Read task chat",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def get_task_chat(task_id: str, after_id: int = 0) -> dict:
     """Read the chat thread on an owned task. Returns `channel`
     (open/closed), `task_status`, your `remaining_messages`, and `messages`
@@ -550,7 +677,13 @@ async def get_task_chat(task_id: str, after_id: int = 0) -> dict:
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get task status",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def get_task_status(task_id: str) -> dict:
     """Get task lifecycle state, active offer, assigned worker, completion proof,
     and timeline. Offer amounts are integer minor units and timestamps are ISO
@@ -559,7 +692,13 @@ async def get_task_status(task_id: str) -> dict:
     return await _request("GET", f"/tasks/{task_id}")
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Await task update",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def await_task_update(
     task_id: str,
     timeout_seconds: float = MAX_TASK_WAIT_SECONDS,
@@ -579,7 +718,13 @@ async def await_task_update(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="List task events",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def list_task_events(since_id: int = 0, limit: int = 50) -> dict:
     """Catch up on everything that happened to your tasks while you were away.
 
@@ -604,7 +749,13 @@ async def list_task_events(since_id: int = 0, limit: int = 50) -> dict:
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Get completion proof",
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def get_task_proof(task_id: str):
     """View submitted completion proof before accepting or rejecting it.
 
@@ -656,7 +807,13 @@ async def get_task_proof(task_id: str):
     return content
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Update a task",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def update_task(
     task_id: str,
     title: str | None = None,
@@ -697,14 +854,26 @@ async def update_task(
     return await _request("PATCH", f"/tasks/{task_id}", json=body)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Cancel a task",
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def cancel_task(task_id: str, reason: str | None = None) -> dict:
     """Cancel a task and any pending offer. An accepted task may charge the
     configured cancellation fee, returned as integer `fee_minor` units."""
     return await _request("POST", f"/tasks/{task_id}/cancel", json={"reason": reason})
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Review completion proof",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
+))
 async def submit_completion_review(task_id: str, decision: str, reason: str | None = None) -> dict:
     """Review submitted proof with decision `accept`, `reject`, or
     `request_changes`. Reject and request_changes both require a reason.
@@ -725,7 +894,13 @@ async def submit_completion_review(task_id: str, decision: str, reason: str | No
     return await _request("POST", f"/tasks/{task_id}/review", json=body)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    title="Rate a completed task",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+))
 async def submit_rating(task_id: str, score: int, description: str) -> dict:
     """Rate a completed task once with an integer score from 1 through 5 and a
     written description. Records the rating and recomputes the worker
