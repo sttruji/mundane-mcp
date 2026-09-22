@@ -14,6 +14,7 @@ import os
 import re
 import uuid
 from contextvars import ContextVar
+from typing import Annotated
 from importlib import metadata as importlib_metadata
 from io import BytesIO
 from urllib.parse import urlsplit
@@ -21,6 +22,7 @@ from urllib.parse import urlsplit
 import httpx
 from mcp.server.fastmcp import FastMCP, Image as MCPImage
 from mcp.types import Icon as MCPIcon, ToolAnnotations
+from pydantic import Field
 from PIL import Image as PILImage, ImageOps, UnidentifiedImageError
 from pillow_heif import register_heif_opener
 
@@ -331,11 +333,11 @@ async def get_spend_status() -> dict:
     openWorldHint=True,
 ))
 async def topup_wallet(
-    amount_minor: int,
-    currency: str = "USD",
-    success_url: str = "https://mundane.market/?topup=success",
-    cancel_url: str = "https://mundane.market/?topup=cancelled",
-    idempotency_key: str | None = None,
+    amount_minor: Annotated[int, Field(description="How much to add, in integer minor units (cents for USD) -- 5000 means $50.00. Never a float.")],
+    currency: Annotated[str, Field(description="ISO-4217 currency code. USD is the only currency supported today.")] = "USD",
+    success_url: Annotated[str, Field(description="Where Stripe sends the payer after a successful payment.")] = "https://mundane.market/?topup=success",
+    cancel_url: Annotated[str, Field(description="Where Stripe sends the payer if they abandon checkout.")] = "https://mundane.market/?topup=cancelled",
+    idempotency_key: Annotated[str | None, Field(description="Optional key of your own choosing so a retry reuses the existing checkout instead of opening a second one.")] = None,
 ) -> dict:
     """Create a Stripe Checkout link that adds funds to the principal's wallet.
     Returns checkout_url -- hand that link to your human, who pays on Stripe's
@@ -359,10 +361,10 @@ async def topup_wallet(
     openWorldHint=True,
 ))
 async def submit_experience_feedback(
-    gap_text: str,
-    tags: list[str] | None = None,
-    free_text: str | None = None,
-    task_id: str | None = None,
+    gap_text: Annotated[str, Field(description="What you were trying to do that Mundane could not support, in your own words. This is the part a human reads.")],
+    tags: Annotated[list[str] | None, Field(description="Optional short slugs grouping the gap, e.g. ['missing_capability', 'pricing'].")] = None,
+    free_text: Annotated[str | None, Field(description="Optional extra context that does not belong in gap_text.")] = None,
+    task_id: Annotated[str | None, Field(description="Optional task this came out of, when the gap surfaced on a specific job.")] = None,
 ) -> dict:
     """Explicitly submit post-task experience feedback to Mundane. Phrase
     `gap_text` as "If I'd had a way to ..., I could have ..." and optionally
@@ -386,19 +388,19 @@ async def submit_experience_feedback(
     openWorldHint=True,
 ))
 async def post_task(
-    title: str,
-    instructions: str,
-    lat: float,
-    lng: float,
-    required_capabilities: list[str],
-    budget_max_minor: int,
-    deadline: str,
-    address: str | None = None,
-    proof_requirements: list[str] | None = None,
-    proof_requirement_opt_outs: list[str] | None = None,
-    currency: str = "USD",
-    request_live_location: bool = False,
-    idempotency_key: str | None = None,
+    title: Annotated[str, Field(description="Short summary a worker sees first, e.g. 'Photograph the storefront at 5th and Main'.")],
+    instructions: Annotated[str, Field(description="What the worker must actually do, specific enough to finish without asking you. Screened before dispatch.")],
+    lat: Annotated[float, Field(description="Latitude where the work happens, decimal degrees.")],
+    lng: Annotated[float, Field(description="Longitude where the work happens, decimal degrees.")],
+    required_capabilities: Annotated[list[str], Field(description="Capability slugs the worker must hold. Use exact slugs from list_capabilities -- an unknown slug is rejected.")],
+    budget_max_minor: Annotated[int, Field(description="Most you will pay for the work, integer minor units. Must sit within your per-task cap; see get_spend_status.")],
+    deadline: Annotated[str, Field(description="When the work must be done, ISO-8601 UTC, e.g. '2026-06-21T18:00:00Z'.")],
+    address: Annotated[str | None, Field(description="Optional street address shown to the worker alongside the map pin.")] = None,
+    proof_requirements: Annotated[list[str] | None, Field(description="Optional proof types to require on top of whatever the capability already demands.")] = None,
+    proof_requirement_opt_outs: Annotated[list[str] | None, Field(description="Optional proof types to waive, where the capability permits waiving them.")] = None,
+    currency: Annotated[str, Field(description="ISO-4217 currency code. USD is the only currency supported today.")] = "USD",
+    request_live_location: Annotated[bool, Field(description="Ask the worker to share live location while working. They must consent; it is never automatic.")] = False,
+    idempotency_key: Annotated[str | None, Field(description="Optional key of your own choosing so a retry does not post the task twice.")] = None,
 ) -> dict:
     """Create a real-world task and run the full screening cascade: policy_gate
     regex, task_shapes shape_match, a Claude LLM classifier when ANTHROPIC_API_KEY is set
@@ -440,7 +442,9 @@ async def post_task(
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def get_worker_location(task_id: str) -> dict:
+async def get_worker_location(
+    task_id: Annotated[str, Field(description="An owned task that was posted with request_live_location and whose worker consented.")],
+) -> dict:
     """Current live location of the worker on an owned task that was posted
     with `request_live_location`. `sharing` reports the state: `not_requested`,
     `pending` (no worker has accepted yet), `awaiting_first_fix` (accepted,
@@ -463,16 +467,16 @@ async def get_worker_location(task_id: str) -> dict:
     openWorldHint=True,
 ))
 async def search_workers(
-    lat: float,
-    lng: float,
-    radius_km: float = 25,
-    capability: str | None = None,
-    skill: str | None = None,
-    min_rating: float = 0,
-    min_rating_count: int = 0,
-    max_rate_minor: int | None = None,
-    limit: int = 20,
-    live_now: bool = False,
+    lat: Annotated[float, Field(description="Latitude of the centre of the search, decimal degrees.")],
+    lng: Annotated[float, Field(description="Longitude of the centre of the search, decimal degrees.")],
+    radius_km: Annotated[float, Field(description="How far from that centre to look, in kilometres.")] = 25,
+    capability: Annotated[str | None, Field(description="Optional capability the worker must hold. Use an exact slug from list_capabilities.")] = None,
+    skill: Annotated[str | None, Field(description="Optional free-text skill matched against workers' own skill labels.")] = None,
+    min_rating: Annotated[float, Field(description="Only workers at or above this rating, 0 to 5. Leave at 0 to include unrated workers.")] = 0,
+    min_rating_count: Annotated[int, Field(description="Only workers with at least this many ratings. Leave at 0 to include new workers.")] = 0,
+    max_rate_minor: Annotated[int | None, Field(description="Only workers whose asking rate is at or below this, integer minor units.")] = None,
+    limit: Annotated[int, Field(description="Maximum number of workers to return.")] = 20,
+    live_now: Annotated[bool, Field(description="Only workers currently marked as available.")] = False,
 ) -> list | dict:
     """Find verified workers near a point matching capability, rating, and price
     filters, ranked for selection. `ask_rate_minor` is each worker's enforced
@@ -516,7 +520,9 @@ async def search_workers(
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def get_worker(worker_id: str) -> dict:
+async def get_worker(
+    worker_id: Annotated[str, Field(description="The worker's id, as returned by search_workers.")],
+) -> dict:
     """Return one worker's public profile and reputation. `ask_rate_minor` is
     the worker's enforced minimum per-task price in minor units and
     `ask_rate_basis` is `per_task`. `rate_card` entries are advisory asks for
@@ -535,13 +541,13 @@ async def get_worker(worker_id: str) -> dict:
     openWorldHint=True,
 ))
 async def make_offer(
-    task_id: str,
-    worker_id: str,
-    amount_minor: int,
-    currency: str = "USD",
-    expires_in_seconds: int = 86400,
-    message: str | None = None,
-    idempotency_key: str | None = None,
+    task_id: Annotated[str, Field(description="The task being offered, as returned by post_task.")],
+    worker_id: Annotated[str, Field(description="The worker to offer it to, as returned by search_workers.")],
+    amount_minor: Annotated[int, Field(description="What the worker is paid, integer minor units. Mundane's fee is added on top, so you are charged more than this.")],
+    currency: Annotated[str, Field(description="ISO-4217 currency code. USD is the only currency supported today.")] = "USD",
+    expires_in_seconds: Annotated[int, Field(description="How long the worker has to accept before the offer lapses. Default is 24 hours.")] = 86400,
+    message: Annotated[str | None, Field(description="Optional note sent to the worker with the offer.")] = None,
+    idempotency_key: Annotated[str | None, Field(description="Optional key of your own choosing so a retry does not create a second offer or hold escrow twice.")] = None,
 ) -> dict:
     """Offer a task to a worker. `amount_minor` is the worker's per-task amount
     in integer minor units of `currency`; the platform fee is added on top.
@@ -573,9 +579,9 @@ ATTACHMENT_EXTENSIONS = frozenset({
     openWorldHint=True,
 ))
 async def attach_task_file(
-    task_id: str,
-    file_path: str,
-    filename: str | None = None,
+    task_id: Annotated[str, Field(description="The owned task to attach the file to.")],
+    file_path: Annotated[str, Field(description="Path to the file on the machine running this server -- not a URL, and not a path on the worker's device.")],
+    filename: Annotated[str | None, Field(description="Optional name to show the worker instead of the basename of file_path.")] = None,
 ) -> dict:
     """Attach a working file from local disk to an owned task -- e.g. the
     STL/STEP model for a 3D-printing task, a spec PDF, or a reference
@@ -622,7 +628,9 @@ async def attach_task_file(
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def list_task_attachments(task_id: str) -> dict:
+async def list_task_attachments(
+    task_id: Annotated[str, Field(description="The owned task whose attachments you want listed.")],
+) -> dict:
     """List an owned task's attachments: id, filename, content_type,
     byte_size, and created_at for each file (never the bytes). Use to
     confirm what the worker can currently download."""
@@ -636,7 +644,10 @@ async def list_task_attachments(task_id: str) -> dict:
     idempotentHint=False,
     openWorldHint=True,
 ))
-async def send_chat_message(task_id: str, body: str) -> dict:
+async def send_chat_message(
+    task_id: Annotated[str, Field(description="The owned task whose assigned worker you are messaging.")],
+    body: Annotated[str, Field(description="The message itself. Keep it short and about coordinating the work.")],
+) -> dict:
     """Send a short coordination message to the worker assigned to an owned
     task ("the side door is locked", "leave it with the receptionist").
     The channel opens when a worker accepts the offer and closes for posting
@@ -656,7 +667,10 @@ async def send_chat_message(task_id: str, body: str) -> dict:
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def get_task_chat(task_id: str, after_id: int = 0) -> dict:
+async def get_task_chat(
+    task_id: Annotated[str, Field(description="The owned task whose thread you are reading.")],
+    after_id: Annotated[int, Field(description="Return only messages after this id. Pass 0 for the whole thread, then the highest id you saw to poll for new ones.")] = 0,
+) -> dict:
     """Read the chat thread on an owned task. Returns `channel`
     (open/closed), `task_status`, your `remaining_messages`, and `messages`
     ordered oldest-first, each with an integer id, sender_type
@@ -684,7 +698,9 @@ async def get_task_chat(task_id: str, after_id: int = 0) -> dict:
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def get_task_status(task_id: str) -> dict:
+async def get_task_status(
+    task_id: Annotated[str, Field(description="The owned task to inspect.")],
+) -> dict:
     """Get task lifecycle state, active offer, assigned worker, completion proof,
     and timeline. Offer amounts are integer minor units and timestamps are ISO
     8601 strings. Timeline includes screened:<outcome> entries from the screening
@@ -700,8 +716,8 @@ async def get_task_status(task_id: str) -> dict:
     openWorldHint=True,
 ))
 async def await_task_update(
-    task_id: str,
-    timeout_seconds: float = MAX_TASK_WAIT_SECONDS,
+    task_id: Annotated[str, Field(description="The owned task to wait on.")],
+    timeout_seconds: Annotated[float, Field(description="How long to wait for a change before returning empty-handed. Capped at 55 seconds; use list_task_events to catch up over longer gaps.")] = MAX_TASK_WAIT_SECONDS,
 ) -> dict:
     """Wait `timeout_seconds` (capped at 55 seconds) for an owned task to change,
     then return its full
@@ -725,7 +741,10 @@ async def await_task_update(
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def list_task_events(since_id: int = 0, limit: int = 50) -> dict:
+async def list_task_events(
+    since_id: Annotated[int, Field(description="Return events after this id. Pass 0 the first time, then the next_since_id from your previous call.")] = 0,
+    limit: Annotated[int, Field(description="Maximum number of events to return in one call.")] = 50,
+) -> dict:
     """Catch up on everything that happened to your tasks while you were away.
 
     `await_task_update` only helps if you are running at the moment something
@@ -756,7 +775,9 @@ async def list_task_events(since_id: int = 0, limit: int = 50) -> dict:
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def get_task_proof(task_id: str):
+async def get_task_proof(
+    task_id: Annotated[str, Field(description="The owned task whose submitted proof you want to see.")],
+):
     """View submitted completion proof before accepting or rejecting it.
 
     Returns each proof item's metadata as text and each protected photo as MCP
@@ -815,16 +836,16 @@ async def get_task_proof(task_id: str):
     openWorldHint=True,
 ))
 async def update_task(
-    task_id: str,
-    title: str | None = None,
-    instructions: str | None = None,
-    lat: float | None = None,
-    lng: float | None = None,
-    address: str | None = None,
-    required_capabilities: list[str] | None = None,
-    budget_max_minor: int | None = None,
-    deadline: str | None = None,
-    proof_requirements: list[str] | None = None,
+    task_id: Annotated[str, Field(description="The task to amend. It must not have been accepted by a worker yet.")],
+    title: Annotated[str | None, Field(description="New title, or omit to leave it unchanged.")] = None,
+    instructions: Annotated[str | None, Field(description="New instructions, or omit to leave them unchanged. Re-screened if supplied.")] = None,
+    lat: Annotated[float | None, Field(description="New latitude, or omit to leave it unchanged.")] = None,
+    lng: Annotated[float | None, Field(description="New longitude, or omit to leave it unchanged.")] = None,
+    address: Annotated[str | None, Field(description="New street address, or omit to leave it unchanged.")] = None,
+    required_capabilities: Annotated[list[str] | None, Field(description="Replacement capability slugs, or omit to leave them unchanged.")] = None,
+    budget_max_minor: Annotated[int | None, Field(description="New maximum spend in integer minor units, or omit to leave it unchanged.")] = None,
+    deadline: Annotated[str | None, Field(description="New deadline, ISO-8601 UTC, or omit to leave it unchanged.")] = None,
+    proof_requirements: Annotated[list[str] | None, Field(description="Replacement proof requirements, or omit to leave them unchanged.")] = None,
 ) -> dict:
     """Amend an unassigned task instead of cancel-and-repost. Supply only the
     fields to change; at least one is required. Material changes (title,
@@ -861,7 +882,10 @@ async def update_task(
     idempotentHint=False,
     openWorldHint=True,
 ))
-async def cancel_task(task_id: str, reason: str | None = None) -> dict:
+async def cancel_task(
+    task_id: Annotated[str, Field(description="The task to cancel, along with any offer still pending on it.")],
+    reason: Annotated[str | None, Field(description="Why you are cancelling. Shown to the worker, and worth giving if they had already accepted -- a cancellation fee may be charged.")] = None,
+) -> dict:
     """Cancel a task and any pending offer. An accepted task may charge the
     configured cancellation fee, returned as integer `fee_minor` units."""
     return await _request("POST", f"/tasks/{task_id}/cancel", json={"reason": reason})
@@ -874,7 +898,11 @@ async def cancel_task(task_id: str, reason: str | None = None) -> dict:
     idempotentHint=False,
     openWorldHint=True,
 ))
-async def submit_completion_review(task_id: str, decision: str, reason: str | None = None) -> dict:
+async def submit_completion_review(
+    task_id: Annotated[str, Field(description="The task whose submitted proof you are reviewing.")],
+    decision: Annotated[str, Field(description="One of 'accept', 'reject', or 'request_changes'. Prefer request_changes when the proof is merely incomplete -- it keeps escrow held and opens no dispute.")],
+    reason: Annotated[str | None, Field(description="Why. Required for both 'reject' and 'request_changes', and read by a person.")] = None,
+) -> dict:
     """Review submitted proof with decision `accept`, `reject`, or
     `request_changes`. Reject and request_changes both require a reason.
 
@@ -901,7 +929,11 @@ async def submit_completion_review(task_id: str, decision: str, reason: str | No
     idempotentHint=True,
     openWorldHint=True,
 ))
-async def submit_rating(task_id: str, score: int, description: str) -> dict:
+async def submit_rating(
+    task_id: Annotated[str, Field(description="The completed task you are rating. A task can only be rated once.")],
+    score: Annotated[int, Field(description="Whole number from 1 to 5.")],
+    description: Annotated[str, Field(description="What the worker did well or badly. Shown on their public profile, so write it for a human.")],
+) -> dict:
     """Rate a completed task once with an integer score from 1 through 5 and a
     written description. Records the rating and recomputes the worker
     Bayesian aggregate (prior_mean=4.2, prior_weight=10);

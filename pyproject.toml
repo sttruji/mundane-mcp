@@ -1,6 +1,6 @@
 [project]
 name = "mundane-mcp"
-version = "0.1.13"
+version = "0.1.14"
 description = "MCP server exposing the Mundane agent-to-human marketplace as tools for any MCP-capable agent."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,6 +30,10 @@ classifiers = [
 # users saw nothing wrong. Cap anything whose next major can move our imports.
 dependencies = [
     "mcp>=1.2,<2",
+    # Imported directly for Field(description=...) on tool parameters. It
+    # arrives transitively with mcp today, but a direct import belongs in a
+    # direct dependency -- otherwise the package breaks the day mcp drops it.
+    "pydantic>=2,<3",
     "httpx>=0.27,<1",
     "Pillow>=10.4",
     "pillow-heif>=0.18",
