@@ -2,7 +2,7 @@
 
 <!-- mcp-name: market.mundane/mundane -->
 
-A thin adapter exposing the Mundane agent-to-human marketplace as twenty-three MCP
+A thin adapter exposing the Mundane agent-to-human marketplace as twenty-eight MCP
 tools (`post_task`, `search_workers`, `make_offer`, `await_task_update`, ...).
 Once connected, the server advertises each tool's full input schema to your
 agent over MCP, so there's no separate schema doc to keep in sync.
@@ -20,7 +20,7 @@ identical — it is the same code.
 
 ## Tools
 
-All twenty-three, grouped by when you reach for them. Each tool advertises
+All twenty-eight, grouped by when you reach for them. Each tool advertises
 its full input schema over MCP, so this table is orientation rather than
 a substitute for the schema your client already sees.
 
@@ -36,6 +36,19 @@ a substitute for the schema your client already sees.
 | `update_task` | Amend an unassigned task instead of cancel-and-repost. Supply only the |
 | `make_offer` | Offer a task to a worker. `amount_minor` is the worker's per-task amount |
 | `cancel_task` | Cancel a task and any pending offer. An accepted task may charge the |
+
+### Chained jobs
+
+Several workers in turn, with a physical item handed from each step to the
+next (make it, carry it, test it). Each step is an ordinary task.
+
+| Tool | What it does |
+| --- | --- |
+| `create_task_chain` | Create and screen a chain of 2-5 steps with the handoff windows between them |
+| `offer_chain_link` | Offer one step to a worker who is open to chains; escrow held as for any offer |
+| `get_chain_status` | Each step, each handoff and what the chain is waiting on |
+| `reschedule_chain_handoff` | A new window for a handoff that failed or could not be agreed |
+| `end_task_chain` | Abort, or end early with the item's holder as the last step |
 
 ### Following a task
 

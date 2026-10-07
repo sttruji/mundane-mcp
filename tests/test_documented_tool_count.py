@@ -33,6 +33,11 @@ NUMBER_WORDS = {
     "twenty-three": 23,
     "twenty-four": 24,
     "twenty-five": 25,
+    "twenty-six": 26,
+    "twenty-seven": 27,
+    "twenty-eight": 28,
+    "twenty-nine": 29,
+    "thirty": 30,
 }
 WORD_PATTERN = re.compile(
     r"\b(" + "|".join(sorted(NUMBER_WORDS, key=len, reverse=True)) + r")\s+(?:MCP\s+)?tools\b",
@@ -55,7 +60,7 @@ class DocumentedToolCountTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_registered_tool_count_is_stable(self):
         # Guards against an accidental duplicate or dropped @mcp.tool().
-        self.assertEqual(self.actual, 23)
+        self.assertEqual(self.actual, 28)
 
     async def test_readme_states_the_real_count(self):
         for claimed in self._documented(README):
