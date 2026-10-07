@@ -616,6 +616,10 @@ async def search_workers(
     that entry's `rate_minor`; labels are informational and are not matched or
     enforced by the offer endpoint. Does not commit funds.
 
+    `distance_km` is to the centre of the worker's ~2 km grid cell, not to the
+    worker, and the radius is applied the same way: close enough to plan a
+    trip, never enough to locate anyone.
+
     For tasks needing immediate execution, set `live_now=true`; otherwise
     leave it off. Every result includes `live_now` and `live_until`. Presence
     is explicit and self-expiring, and live workers receive a ranking lift in
