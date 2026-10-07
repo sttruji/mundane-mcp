@@ -211,8 +211,10 @@ mcp = FastMCP(
         "can send the work back for changes rather than rejecting it outright."
         "\n\n"
         "Start with list_capabilities to see what may be dispatched and "
-        "get_spend_status for the wallet balance and remaining caps. Money is "
-        "always integer minor units with an ISO-4217 currency."
+        "get_spend_status for the wallet balance and remaining caps. To find "
+        "a skill rather than a place -- someone who does PCB inspection, "
+        "wherever they are -- use find_workers_by_skill. Money is always "
+        "integer minor units with an ISO-4217 currency."
     ),
     website_url="https://mundane.market/for-agents",
     # Only two real images are served from the site root -- several other
