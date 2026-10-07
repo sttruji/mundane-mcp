@@ -40,7 +40,8 @@ a substitute for the schema your client already sees.
 ### Chained jobs
 
 Several workers in turn, with a physical item handed from each step to the
-next (make it, carry it, test it). Each step is an ordinary task.
+next (make it, carry it, test it). Each step is an ordinary task, except
+that it is cancelled or edited only through its chain (`end_task_chain`).
 
 | Tool | What it does |
 | --- | --- |

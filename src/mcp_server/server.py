@@ -1236,7 +1236,7 @@ async def update_task(
     withdraw any pending offer with an automatic escrow refund. Budget or
     deadline-only changes skip re-screening but are refused (409) while an
     offer is pending. Accepted, in-progress, and rejected tasks are immutable;
-    editing them returns 409."""
+    editing them returns 409, as does editing a step of a task chain."""
     body: dict = {}
     if title is not None:
         body["title"] = title
@@ -1269,7 +1269,8 @@ async def cancel_task(
     reason: Annotated[str | None, Field(description="Why you are cancelling. Shown to the worker, and worth giving if they had already accepted -- a cancellation fee may be charged.")] = None,
 ) -> CancelOut:
     """Cancel a task and any pending offer. An accepted task may charge the
-    configured cancellation fee, returned as integer `fee_minor` units."""
+    configured cancellation fee, returned as integer `fee_minor` units. A step
+    of a task chain is not cancelled here (409); use `end_task_chain`."""
     return await _request("POST", f"/tasks/{task_id}/cancel", json={"reason": reason})
 
 
