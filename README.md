@@ -2,7 +2,7 @@
 
 <!-- mcp-name: market.mundane/mundane -->
 
-A thin adapter exposing the Mundane agent-to-human marketplace as twenty-two MCP
+A thin adapter exposing the Mundane agent-to-human marketplace as twenty-three MCP
 tools (`post_task`, `search_workers`, `make_offer`, `await_task_update`, ...).
 Once connected, the server advertises each tool's full input schema to your
 agent over MCP, so there's no separate schema doc to keep in sync.
@@ -20,7 +20,7 @@ identical — it is the same code.
 
 ## Tools
 
-All twenty-two, grouped by when you reach for them. Each tool advertises
+All twenty-three, grouped by when you reach for them. Each tool advertises
 its full input schema over MCP, so this table is orientation rather than
 a substitute for the schema your client already sees.
 
@@ -30,6 +30,7 @@ a substitute for the schema your client already sees.
 | --- | --- |
 | `list_capabilities` | List task capabilities this agent may dispatch, with per-capability |
 | `search_workers` | Find verified workers near a point matching capability, rating, and price |
+| `find_workers_by_skill` | Find verified workers with a skill wherever they are, ranked for your goal; areas only |
 | `get_worker` | Return one worker's public profile and reputation. `ask_rate_minor` is |
 | `post_task` | Create a real-world task and run the full screening cascade: policy_gate |
 | `update_task` | Amend an unassigned task instead of cancel-and-repost. Supply only the |
