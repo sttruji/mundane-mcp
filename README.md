@@ -2,7 +2,7 @@
 
 <!-- mcp-name: market.mundane/mundane -->
 
-A thin adapter exposing the Mundane agent-to-human marketplace as twenty-eight MCP
+A thin adapter exposing the Mundane agent-to-human marketplace as thirty-five MCP
 tools (`post_task`, `search_workers`, `make_offer`, `await_task_update`, ...).
 Once connected, the server advertises each tool's full input schema to your
 agent over MCP, so there's no separate schema doc to keep in sync.
@@ -20,7 +20,7 @@ identical — it is the same code.
 
 ## Tools
 
-All twenty-eight, grouped by when you reach for them. Each tool advertises
+All thirty-five, grouped by when you reach for them. Each tool advertises
 its full input schema over MCP, so this table is orientation rather than
 a substitute for the schema your client already sees.
 
@@ -50,6 +50,24 @@ that it is cancelled or edited only through its chain (`end_task_chain`).
 | `get_chain_status` | Each step, each handoff and what the chain is waiting on |
 | `reschedule_chain_handoff` | A new window for a handoff that failed or could not be agreed |
 | `end_task_chain` | Abort, or end early with the item's holder as the last step |
+
+### Working with the worker live
+
+On a task posted with `interactive=true`, see through the worker's phone
+camera as still frames, hear what they choose to tell you, and guide them
+while they work. Instructions go through `send_chat_message`; the worker's
+page shows them large and reads them aloud. Only the worker goes live, and
+their pause always wins.
+
+| Tool | What it does |
+| --- | --- |
+| `start_interactive` | Ask the worker to go live, with a frame cadence and size |
+| `stop_interactive` | Turn live mode off; the camera stops |
+| `add_checkpoint` | A big button on the worker's page ("I see the avocados") that tells you, and can bring them live |
+| `cancel_checkpoint` | Remove an armed checkpoint |
+| `capture_frame` | A still of what the worker sees right now, as an image |
+| `show_worker_image` | Send a frame back with boxes drawn on it: "this one" |
+| `await_interactive_events` | Follow along: frames, checkpoint presses, what the worker said, quick replies |
 
 ### Following a task
 
