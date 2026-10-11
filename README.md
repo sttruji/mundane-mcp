@@ -63,7 +63,7 @@ their pause always wins.
 | --- | --- |
 | `start_interactive` | Ask the worker to go live, with a frame cadence and size |
 | `stop_interactive` | Turn live mode off; the camera stops |
-| `add_checkpoint` | A big button on the worker's page ("I see the avocados") that tells you, and can bring them live |
+| `add_checkpoint` | A big button on the worker's page ("I see the avocados") that tells you, and can bring them live. Answer buttons for one question share a `group`: once the worker picks, the rest clear |
 | `cancel_checkpoint` | Remove an armed checkpoint |
 | `capture_frame` | A still of what the worker sees right now, as an image |
 | `show_worker_image` | Send a frame back with boxes drawn on it: "this one" |

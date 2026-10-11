@@ -50,6 +50,20 @@ class InteractiveToolContractTests(unittest.IsolatedAsyncioTestCase):
         for name in ("search_workers", "find_workers_by_skill"):
             self.assertIn("interactive_ok", self.tools[name].inputSchema["properties"])
 
+    async def test_a_checkpoint_sends_its_group_only_when_it_has_one(self):
+        with patch.object(server, "_request", new_callable=AsyncMock,
+                          return_value={"checkpoint_id": "c-1"}) as request:
+            await server.add_checkpoint("t-1", "I see the avocados")
+            await server.add_checkpoint("t-1", "Persimmon is firm", color="green", go_live=False,
+                                        group="persimmon", picks=1)
+        plain, grouped = (c.kwargs["json"] for c in request.await_args_list)
+        self.assertEqual(plain, {"label": "I see the avocados", "color": "green", "go_live": True})
+        self.assertEqual(grouped, {"label": "Persimmon is firm", "color": "green", "go_live": False,
+                                   "group": "persimmon", "picks": 1})
+        props = self.tools["add_checkpoint"].inputSchema["properties"]
+        self.assertTrue({"group", "picks"} <= set(props))
+        self.assertIn("the rest of the group leave their page", props["group"]["description"])
+
     async def test_start_sends_the_cadence_and_size(self):
         with patch.object(server, "_request", new_callable=AsyncMock,
                           return_value={"state": "requested"}) as request:

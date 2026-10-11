@@ -1042,13 +1042,25 @@ async def add_checkpoint(
     label: Annotated[str, Field(description="The button's text, as the worker should press it: 'I see the avocados', 'I'm at the ground beef'. 1-60 characters.")],
     color: Annotated[str, Field(description="green, red, blue, yellow, purple or orange.")] = "green",
     go_live: Annotated[bool, Field(description="Pressing it also puts the worker live, so frames start. False just tells you.")] = True,
+    group: Annotated[str | None, Field(description="Name the question this button answers ('persimmon firmness') and give every answer button the same group: once the worker picks, the rest of the group leave their page. 1-40 characters. Omit for a standalone button.")] = None,
+    picks: Annotated[int, Field(description="How many of the group's buttons answer it, 1-6: 1 for a single choice. Every button in a group says the same. Needs a group.")] = 1,
 ) -> dict:
     """Put a big button on the worker's page for a moment you care about. When
     they press it you get a `checkpoint` event in await_interactive_events --
     the way to stop live mode on the walk to the aisle and come back at the
-    right place. Up to 6 armed at once; each fires once."""
-    return await _request("POST", f"/tasks/{task_id}/interactive/checkpoints",
-                          json={"label": label, "color": color, "go_live": go_live})
+    right place. Up to 6 armed at once; each fires once.
+
+    For a question, arm one button per answer in the same `group`. When the
+    worker has pressed `picks` of them, the others clear from their page
+    (status `cleared`, listed in the event's `cleared`), so they don't
+    linger beside your next question. An answered group can't be reused:
+    give the next question its own."""
+    body: dict = {"label": label, "color": color, "go_live": go_live}
+    if group is not None:
+        body |= {"group": group, "picks": picks}
+    elif picks != 1:
+        body["picks"] = picks   # the API explains that picks needs a group
+    return await _request("POST", f"/tasks/{task_id}/interactive/checkpoints", json=body)
 
 
 @mcp.tool(annotations=ToolAnnotations(
