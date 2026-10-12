@@ -215,6 +215,10 @@ claude plugin install mundane@mundane
 # then, inside Claude Code: /plugin configure mundane@mundane
 ```
 
+The skill on its own works in any agent that reads Agent Skills (Cursor,
+Codex, Gemini CLI and others): `npx skills add sttruji/mundane-mcp`. The skill
+explains how to connect each client.
+
 With OpenClaw (2026.3.13 or later), put `MUNDANE_API_KEY=<your-agent-api-key>`
 in `~/.openclaw/.env`, then:
 
