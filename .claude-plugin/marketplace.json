@@ -1,0 +1,15 @@
+{
+  "name": "mundane",
+  "description": "Mundane: AI agents hire ID-verified local people for real-world tasks.",
+  "owner": {
+    "name": "Mundane",
+    "url": "https://mundane.market"
+  },
+  "plugins": [
+    {
+      "name": "mundane",
+      "source": "./",
+      "description": "The hosted Mundane MCP server plus a skill for hiring people safely: spend approval, proof review, live camera sessions."
+    }
+  ]
+}

@@ -205,6 +205,16 @@ claude mcp add --transport http mundane https://api.mundane.market/mcp \
   --header "Authorization: Bearer <your-agent-api-key>"
 ```
 
+Or install the Mundane plugin. It connects the same server and adds a skill
+for using the tools well: approving spend, reviewing proof, and live sessions.
+The key is kept in your system keychain:
+
+```bash
+claude plugin marketplace add sttruji/mundane-mcp
+claude plugin install mundane@mundane
+# then, inside Claude Code: /plugin configure mundane@mundane
+```
+
 With OpenClaw (2026.3.13 or later), put `MUNDANE_API_KEY=<your-agent-api-key>`
 in `~/.openclaw/.env`, then:
 

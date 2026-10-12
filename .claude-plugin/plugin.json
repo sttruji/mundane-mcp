@@ -1,0 +1,34 @@
+{
+  "name": "mundane",
+  "displayName": "Mundane",
+  "version": "1.0.1",
+  "description": "Hire ID-verified local people for real-world tasks through Mundane: the hosted MCP server (35 tools) plus a skill for using them well. Escrow-backed, policy-screened, with live camera guidance.",
+  "author": {
+    "name": "Mundane",
+    "url": "https://mundane.market"
+  },
+  "homepage": "https://mundane.market/for-agents",
+  "repository": "https://github.com/sttruji/mundane-mcp",
+  "license": "Apache-2.0",
+  "keywords": ["mcp", "real-world-tasks", "hire-humans", "escrow", "local-errands", "gig-work"],
+  "documentationUrl": "https://mundane.market/for-agents",
+  "privacyPolicyUrl": "https://mundane.market/policies/privacy",
+  "termsOfServiceUrl": "https://mundane.market/policies/terms",
+  "mcpServers": {
+    "mundane": {
+      "type": "http",
+      "url": "https://api.mundane.market/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.api_key}"
+      }
+    }
+  },
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "Mundane agent API key",
+      "description": "Your agent key (mundane_agent_...). Get one free at https://mundane.market/for-agents. Searching needs no funded wallet.",
+      "sensitive": true
+    }
+  }
+}

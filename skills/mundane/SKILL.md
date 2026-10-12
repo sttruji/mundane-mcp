@@ -1,7 +1,7 @@
 ---
 name: mundane
 description: Hire ID-verified local people for real-world tasks (errands, photos, pickups, checks, store visits) through the Mundane marketplace, with payment held in escrow until you approve the proof. Use when the user needs something done in the physical world by a person.
-version: 1.0.0
+version: 1.0.1
 homepage: https://mundane.market/for-agents
 metadata:
   openclaw:
@@ -27,32 +27,43 @@ below first.
 
 ## Setup (once)
 
-1. **API key.** The user needs a Mundane agent key in `MUNDANE_API_KEY`.
+1. **API key.** The user needs a Mundane agent key.
    - If they don't have one, they get it self-serve at
      https://mundane.market/for-agents, or with
      `POST https://api.mundane.market/v1/agents/signup`. The key is shown once.
    - Never ask the user to paste the key into chat.
-   - The user adds this line to OpenClaw's global env file, `~/.openclaw/.env`
-     (`$OPENCLAW_STATE_DIR/.env`):
+2. **Connect the hosted MCP server.** There's nothing to install. Use the
+   setup for the user's client:
+   - **Claude Code:** install the Mundane plugin, which connects the server:
 
+     ```bash
+     claude plugin marketplace add sttruji/mundane-mcp
+     claude plugin install mundane@mundane
      ```
-     MUNDANE_API_KEY=mundane_agent_...
-     ```
 
-   Don't use `skills.entries.mundane.apiKey` for this. It marks the skill
-   ready, but the key doesn't reach the MCP connection, so every call fails
-   with 401.
-2. **Connect the hosted MCP server.** There's nothing to install:
+     Then the user sets the key inside Claude Code with
+     `/plugin configure mundane@mundane`. Input is masked, and the key is kept
+     in the system keychain. Restart the session to apply it.
+   - **OpenClaw:**
+     - Add `MUNDANE_API_KEY=mundane_agent_...` to `~/.openclaw/.env`.
+       Don't use `skills.entries.mundane.apiKey` for this. It marks the skill
+       ready, but the key never reaches the MCP connection, so every call
+       fails with 401.
+     - Then connect:
 
-   ```bash
-   openclaw mcp add mundane --transport streamable-http \
-     --url https://api.mundane.market/mcp \
-     --header 'Authorization=Bearer ${MUNDANE_API_KEY}'
-   ```
+       ```bash
+       openclaw mcp add mundane --transport streamable-http \
+         --url https://api.mundane.market/mcp \
+         --header 'Authorization=Bearer ${MUNDANE_API_KEY}'
+       ```
 
-   Keep the single quotes. The config stores `${MUNDANE_API_KEY}` itself, and
-   OpenClaw fills it in on each connection, so the key never lands in the
-   config file. New sessions pick up the tools.
+       Keep the single quotes. The config stores the `${MUNDANE_API_KEY}`
+       placeholder, not the key.
+   - **Any other MCP client:** add a remote server at
+     `https://api.mundane.market/mcp` with the header
+     `Authorization: Bearer <key>`.
+
+   New sessions pick up the tools.
 3. **Check it:** call `get_spend_status`. It needs a valid key (tool listing
    doesn't), and it shows the wallet balance and spend caps.
 4. **Fund the wallet** before hiring. Searching is free; offers need a balance.
