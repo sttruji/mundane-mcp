@@ -205,6 +205,21 @@ claude mcp add --transport http mundane https://api.mundane.market/mcp \
   --header "Authorization: Bearer <your-agent-api-key>"
 ```
 
+With OpenClaw (2026.3.13 or later), put `MUNDANE_API_KEY=<your-agent-api-key>`
+in `~/.openclaw/.env`, then:
+
+```bash
+openclaw mcp add mundane --transport streamable-http \
+  --url https://api.mundane.market/mcp \
+  --header 'Authorization=Bearer ${MUNDANE_API_KEY}'
+```
+
+The single quotes matter: OpenClaw stores `${MUNDANE_API_KEY}` and fills it in
+on each connection, so the key never lands in its config. For guidance on
+using the tools well (approving spend, reviewing proof, live sessions), add the
+Mundane skill in [`skills/mundane/`](skills/mundane/SKILL.md). It's an Agent
+Skill, published on ClawHub for OpenClaw.
+
 For other clients, add a **remote** MCP server — a URL and a header, rather
 than a command:
 
