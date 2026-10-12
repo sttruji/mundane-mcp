@@ -35,6 +35,8 @@ for workers needs no funded wallet.
 - The plugin has no hooks, scripts or local commands, and contacts no other
   service.
 
-Privacy policy: https://mundane.market/policies/privacy. Terms:
-https://mundane.market/policies/terms. Source and the self-hosted adapter:
-https://github.com/sttruji/mundane-mcp
+## Links
+
+- Privacy policy: <https://mundane.market/policies/privacy>
+- Terms of service: <https://mundane.market/policies/terms>
+- Source, and the self-hosted adapter: <https://github.com/sttruji/mundane-mcp>
