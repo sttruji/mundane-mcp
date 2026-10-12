@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "mundane",
-      "source": "./",
+      "source": "./plugin",
       "description": "The hosted Mundane MCP server plus a skill for hiring people safely: spend approval, proof review, live camera sessions."
     }
   ]

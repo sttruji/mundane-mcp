@@ -10,10 +10,14 @@
   "homepage": "https://mundane.market/for-agents",
   "repository": "https://github.com/sttruji/mundane-mcp",
   "license": "Apache-2.0",
-  "keywords": ["mcp", "real-world-tasks", "hire-humans", "escrow", "local-errands", "gig-work"],
-  "documentationUrl": "https://mundane.market/for-agents",
-  "privacyPolicyUrl": "https://mundane.market/policies/privacy",
-  "termsOfServiceUrl": "https://mundane.market/policies/terms",
+  "keywords": [
+    "mcp",
+    "real-world-tasks",
+    "hire-humans",
+    "escrow",
+    "local-errands",
+    "gig-work"
+  ],
   "mcpServers": {
     "mundane": {
       "type": "http",
