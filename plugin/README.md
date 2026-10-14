@@ -8,7 +8,7 @@ Policy before a person sees it.
 
 This plugin gives Claude Code or Codex two things:
 
-- **The Mundane MCP server** (35 tools), hosted by Mundane at
+- **The Mundane MCP server** (38 tools), hosted by Mundane at
   `https://api.mundane.market/mcp`. Nothing runs on your machine.
 - **A skill** that teaches the agent to use those tools well: confirm spending
   with you, review proof before releasing payment, run live camera sessions,
