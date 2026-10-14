@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mundane": {
+      "type": "http",
+      "url": "https://api.mundane.market/mcp",
+      "bearer_token_env_var": "MUNDANE_API_KEY"
+    }
+  }
+}

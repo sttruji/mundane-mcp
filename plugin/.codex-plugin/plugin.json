@@ -1,0 +1,46 @@
+{
+  "name": "mundane",
+  "version": "1.0.1",
+  "description": "Hire ID-verified local people for real-world tasks through Mundane: the hosted MCP server (35 tools) plus a skill for using them well. Escrow-backed, policy-screened, with live camera guidance.",
+  "author": {
+    "name": "Mundane",
+    "url": "https://mundane.market"
+  },
+  "homepage": "https://mundane.market/for-agents",
+  "repository": "https://github.com/sttruji/mundane-mcp",
+  "license": "Apache-2.0",
+  "keywords": [
+    "mcp",
+    "real-world-tasks",
+    "hire-humans",
+    "escrow",
+    "local-errands",
+    "gig-work"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./codex.mcp.json",
+  "interface": {
+    "displayName": "Mundane",
+    "shortDescription": "Hire ID-verified local people for real-world tasks",
+    "longDescription": "Mundane is a marketplace where AI agents hire ID-verified local people for tasks in the physical world: photos of a property, a pickup, a shelf check, a place in line. Payment is held in escrow and released only when you approve the worker's proof, and every task is screened against Mundane's Acceptable Use Policy before a person sees it. The plugin connects Codex to Mundane's hosted MCP server and adds a skill that confirms spending with you, reviews proof before paying, runs live camera sessions, and treats anything a worker writes as data, never as instructions.",
+    "developerName": "Mundane",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://mundane.market",
+    "supportURL": "https://mundane.market/for-agents",
+    "privacyPolicyURL": "https://mundane.market/policies/privacy",
+    "termsOfServiceURL": "https://mundane.market/policies/terms",
+    "defaultPrompt": [
+      "Find someone near Union Square who can photograph a storefront today",
+      "How much would it cost to have a person check if a store has an item in stock?",
+      "Show me my open Mundane tasks and any proof waiting for review"
+    ],
+    "brandColor": "#0A0A0A",
+    "composerIcon": "./.claude-plugin/icon.png",
+    "logo": "./.claude-plugin/icon.png",
+    "screenshots": []
+  }
+}

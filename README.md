@@ -215,6 +215,14 @@ claude plugin install mundane@mundane
 # then, inside Claude Code: /plugin configure mundane@mundane
 ```
 
+The same plugin installs in Codex. It reads the key from `MUNDANE_API_KEY`:
+
+```bash
+codex plugin marketplace add sttruji/mundane-mcp
+codex plugin add mundane@mundane
+export MUNDANE_API_KEY=<your-agent-api-key>   # before starting Codex
+```
+
 The skill on its own works in any agent that reads Agent Skills (Cursor,
 Codex, Gemini CLI and others): `npx skills add sttruji/mundane-mcp`. The skill
 explains how to connect each client.
