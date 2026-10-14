@@ -786,7 +786,7 @@ async def get_worker(
 @mcp.tool(annotations=ToolAnnotations(
     title="Make an offer",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=False,
     openWorldHint=True,
 ))
@@ -945,7 +945,7 @@ async def offer_chain_link(
 @mcp.tool(annotations=ToolAnnotations(
     title="Reschedule a chain handoff",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=False,
     openWorldHint=True,
 ))
@@ -1137,7 +1137,7 @@ async def capture_frame(
 @mcp.tool(annotations=ToolAnnotations(
     title="Show the worker an image",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=False,
     openWorldHint=True,
 ))
@@ -1204,7 +1204,7 @@ ATTACHMENT_EXTENSIONS = frozenset({
 @mcp.tool(annotations=ToolAnnotations(
     title="Attach a file",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=False,
     openWorldHint=True,
 ))
@@ -1270,7 +1270,7 @@ async def list_task_attachments(
 @mcp.tool(annotations=ToolAnnotations(
     title="Send a chat message",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=False,
     openWorldHint=True,
 ))
@@ -1463,7 +1463,7 @@ async def get_task_proof(
 @mcp.tool(annotations=ToolAnnotations(
     title="Update a task",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=True,
     openWorldHint=True,
 ))
@@ -1527,7 +1527,7 @@ async def cancel_task(
 @mcp.tool(annotations=ToolAnnotations(
     title="Review completion proof",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=False,
     openWorldHint=True,
 ))
@@ -1558,7 +1558,7 @@ async def submit_completion_review(
 @mcp.tool(annotations=ToolAnnotations(
     title="Rate a completed task",
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=True,
     openWorldHint=True,
 ))

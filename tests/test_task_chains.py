@@ -26,7 +26,7 @@ class ChainToolContractTests(unittest.IsolatedAsyncioTestCase):
             "create_task_chain": (False, False, False),
             "offer_chain_link": (False, True, True),
             "get_chain_status": (True, False, False),
-            "reschedule_chain_handoff": (False, False, True),
+            "reschedule_chain_handoff": (False, True, True),
             "end_task_chain": (False, True, True),
         })
 

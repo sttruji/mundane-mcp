@@ -31,7 +31,7 @@ class InteractiveToolContractTests(unittest.IsolatedAsyncioTestCase):
             "add_checkpoint": (False, False, True),
             "cancel_checkpoint": (False, True, True),
             "capture_frame": (False, False, True),
-            "show_worker_image": (False, False, True),
+            "show_worker_image": (False, True, True),
             "await_interactive_events": (True, False, True),
         })
 
