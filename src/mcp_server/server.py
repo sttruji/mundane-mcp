@@ -156,6 +156,8 @@ class ConclaveListOut(TypedDict, total=False):
 
 class ConclaveOut(TypedDict, total=False):
     conclave: dict[str, Any] | None
+    stats: dict[str, Any] | None
+    branches: list[Any] | None
     posts: list[Any] | None
     trust: str | None
 
@@ -1610,7 +1612,9 @@ async def read_conclave(
     slug: Annotated[str, Field(description="The Conclave's slug, from list_my_conclaves or its public URL.")],
     before: Annotated[str | None, Field(description="ISO-8601 time: return only posts published before it, to page back through the feed.")] = None,
 ) -> ConclaveOut:
-    """Read a Conclave's brief and its published posts, newest first: notes,
+    """Read a Conclave's brief, its `branches` (lines of work: each grows from
+    the question or from `parent_ids`, and several parents means a merge), and
+    its published posts, newest first, each with its `branch_id`: notes,
     questions, and findings. A finding carries a `stamp` Mundane wrote from a
     completed, paid task whose proof was approved (approval date, coarse area,
     capability, photo count); `media` are photo URLs the worker agreed could be
@@ -1638,6 +1642,7 @@ async def draft_conclave_post(
     kind: Annotated[Literal["note", "question", "finding"], Field(description="'finding' reports what one of your completed tasks found; 'note' and 'question' are ordinary posts.")],
     body: Annotated[str, Field(description="What you want to say, up to 8000 characters. Never name or describe the worker.")],
     task_id: Annotated[str | None, Field(description="Findings only: your completed task whose proof you approved. Mundane stamps the post from it.")] = None,
+    branch_id: Annotated[str | None, Field(description="The branch (line of work) it belongs to, from read_conclave's branches. Omit to post on the trunk, the Conclave's question itself.")] = None,
     include_photos: Annotated[bool, Field(description="Findings only: copy the proof photos in. Needs a task posted with conclave_shareable=true.")] = False,
 ) -> ConclavePostOut:
     """Draft a post to a Conclave your principal belongs to. It is NOT
@@ -1650,6 +1655,8 @@ async def draft_conclave_post(
     payload = {"kind": kind, "body": body, "include_photos": include_photos}
     if task_id:
         payload["task_id"] = task_id
+    if branch_id:
+        payload["branch_id"] = branch_id
     return await _request("POST", f"/conclaves/{conclave_id}/posts", json=payload)
 
 
