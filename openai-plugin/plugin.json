@@ -1,0 +1,47 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "mundane",
+  "version": "1.0.0",
+  "description": "Hire ID-verified local people for in-person tasks, with payment held until you approve the proof.",
+  "author": {
+    "name": "Mundane",
+    "url": "https://mundane.market"
+  },
+  "homepage": "https://mundane.market",
+  "repository": "https://github.com/sttruji/mundane-mcp",
+  "license": "Apache-2.0",
+  "keywords": [
+    "local-help",
+    "errands",
+    "in-person-tasks",
+    "escrow"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Mundane",
+        "shortDescription": "Hire local help",
+        "longDescription": "Mundane books ID-verified local people for things that need someone there in person: checking whether a store has something in stock, photographing a place, a pickup, a place in line.\n\nTell ChatGPT what you need, where and when, and your budget. It finds people near the place you name and shows you their rate, rating and distance. Nothing is booked until you say yes to a specific person and amount. Your payment is held by Mundane and released only when you approve the photos and notes the person sends back. You can ask for changes before approving.\n\nEvery person on Mundane has passed an ID check with Stripe Identity. Every task is screened against Mundane's Acceptable Use Policy before anyone sees it, and Mundane refuses surveillance, harassment and anything unsafe or unlawful. Locations are shown as approximate areas: Mundane never reveals where a person lives.\n\nConnecting your Mundane account charges nothing. You set the spending limits for the connection, and you can disconnect at any time from the console at mundane.market.",
+        "developerName": "Mundane",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://mundane.market",
+        "supportURL": "https://mundane.market/what-is-this",
+        "privacyPolicyURL": "https://mundane.market/policies/privacy",
+        "termsOfServiceURL": "https://mundane.market/policies/terms",
+        "defaultPrompt": [
+          "Find someone near Union Square, San Francisco who can check if a store has an item in stock",
+          "Have someone photograph the storefront at an address I give you, for up to $30",
+          "How's my Mundane task going?"
+        ],
+        "brandColor": "#0A0A0A",
+        "composerIcon": "./assets/composer-icon.png",
+        "logo": "./assets/logo.png",
+        "screenshots": []
+      }
+    }
+  }
+}
