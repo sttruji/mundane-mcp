@@ -52,8 +52,14 @@ def reset_request_api_key(token) -> None:
 
 
 def current_api_key() -> str:
-    """The key for this request, falling back to the process-wide one."""
-    return _request_api_key.get() or API_KEY
+    """The key for this request, falling back to the process-wide one.
+
+    Only an *unset* contextvar (stdio) falls back. A request bound to "" --
+    an anonymous discovery or public-tool call on a hosted mount -- has no key
+    and must not borrow the process's: with `or`, "" fell through to API_KEY.
+    """
+    key = _request_api_key.get()
+    return API_KEY if key is None else key
 
 # --- Output shapes -----------------------------------------------------------
 #

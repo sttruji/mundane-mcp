@@ -29,3 +29,4 @@ def test_a_destructive_tool_is_never_read_only():
     for t in asyncio.run(server.mcp.list_tools()):
         if t.annotations.destructiveHint:
             assert t.annotations.readOnlyHint is False, t.name
+
