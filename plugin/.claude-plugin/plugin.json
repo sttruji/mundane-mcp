@@ -8,6 +8,7 @@
     "url": "https://mundane.market"
   },
   "homepage": "https://mundane.market/for-agents",
+  "privacyPolicyUrl": "https://mundane.market/policies/privacy",
   "repository": "https://github.com/sttruji/mundane-mcp",
   "license": "Apache-2.0",
   "keywords": [
